@@ -1,9 +1,10 @@
 package chess.board;
 
-import java.util.ArrayList;
-
 public class Position
 {
+    public static final String STARTING_FEN =
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     private long[] m_BitBoards;
 
     public Position()
@@ -13,7 +14,7 @@ public class Position
 
     public void SetStartingPosition()
     {
-        SetPosition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        SetPosition(STARTING_FEN);
     }
 
     public void SetPosition(String fen)
@@ -28,31 +29,56 @@ public class Position
             throw new IllegalArgumentException("FEN must have 6 elements");
         }
 
-        int file = 0;
-        int rank = 7;
+        long[] bitBoards = ParsePlacement(fenParts[0]);
 
-        for (char c : fenParts[0].toCharArray())
+        int sideToMove;
+
+        switch (fenParts[1])
         {
-            if (c == 'p')
+            case "w":
             {
-
+                sideToMove = Piece.WHITE;
             }
-
-
+            case "b":
+            {
+                sideToMove = Piece.BLACK;
+            }
+            default:
+            {
+                throw new IllegalArgumentException("Invalid FEN side to move");
+            }
         }
 
-
-
-
+        int castlingRights = ParseCastlingRights(fenParts[2]);
+        int enPassantSquare = ParseEnPassantSquare(fenParts[3], sideToMove);
+        int halfmoveClock = ParseCounter(fenParts[4]);
+        int fullmoveNumber = ParseCounter(fenParts[5]);
 
 
 
 
     }
 
+    private long[] ParsePlacement(String placement)
+    {
+        long[] bitBoards = new long[Piece.COUNT];
+        return bitBoards;
+    }
 
+    private int ParseCastlingRights(String castlingRights)
+    {
+        return 0;
+    }
 
+    private int ParseEnPassantSquare(String square, int sideToMove)
+    {
+        return -1;
+    }
 
+    private int ParseCounter(String counter)
+    {
+        return 1;
+    }
 
 
 }

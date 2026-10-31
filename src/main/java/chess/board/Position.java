@@ -276,18 +276,22 @@ public class Position
                 case 'K':
                 {
                     rights |= WHITE_KINGSIDE;
+                    break;
                 }
                 case 'Q':
                 {
                     rights |= WHITE_QUEENSIDE;
+                    break;
                 }
                 case 'k':
                 {
                     rights |= BLACK_KINGSIDE;
+                    break;
                 }
                 case 'q':
                 {
                     rights |= BLACK_QUEENSIDE;
+                    break;
                 }
             }
 

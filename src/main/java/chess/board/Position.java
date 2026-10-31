@@ -165,6 +165,74 @@ public class Position
 
     }
 
+    public int GetPiece(int square)
+    {
+        if (square < 0 || 63 < square)
+        {
+            throw new IllegalArgumentException("Invalid square: " + square);
+        }
+
+        long mask = 1L << square;
+
+        for (int piece = 0; piece < Piece.COUNT; piece++)
+        {
+            if ((m_BitBoards[piece] & mask) != 0)
+            {
+                return piece;
+            }
+        }
+        return Piece.NONE;
+    }
+
+    public long GetBitBoard(int piece)
+    {
+        if (piece < 0 || Piece.COUNT <= piece)
+        {
+            throw new IllegalArgumentException("Invalid piece index: " + piece);
+        }
+        return m_BitBoards[piece];
+    }
+
+    public long GetOccupancy(int color)
+    {
+        return switch (color)
+        {
+            case Piece.WHITE -> m_WhiteOccupancy;
+            case Piece.BLACK -> m_BlackOccupancy;
+            default -> throw new IllegalArgumentException("Invalid color: " + color);
+        };
+    }
+
+    public long GetOccupancy()
+    {
+        return m_WhiteOccupancy | m_BlackOccupancy;
+    }
+
+    public int GetSideToMove()
+    {
+        return m_SideToMove;
+    }
+
+    public int GetCastlingRights()
+    {
+        return m_CastlingRights;
+    }
+
+    public int GetEnPassantSquare()
+    {
+        return m_EnPassantSquare;
+    }
+
+    public int GetHalfmoveClock()
+    {
+        return m_HalfmoveClock;
+    }
+
+    public int GetFullmoveNumber()
+    {
+        return m_FullmoveNumber;
+    }
+
     private long[] ParsePlacement(String placement)
     {
         long[] bitBoards = new long[Piece.COUNT];
@@ -259,23 +327,6 @@ public class Position
         return value;
     }
 
-    public int GetPiece(int square)
-    {
-        if (square < 0 || 63 < square)
-        {
-            throw new IllegalArgumentException("Invalid square: " + square);
-        }
 
-        long mask = 1L << square;
-
-        for (int piece = 0; piece < Piece.COUNT; piece++)
-        {
-            if ((m_BitBoards[piece] & mask) != 0)
-            {
-                return piece;
-            }
-        }
-        return Piece.NONE;
-    }
 
 }

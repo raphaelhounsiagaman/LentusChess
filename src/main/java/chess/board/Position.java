@@ -14,6 +14,14 @@ public class Position
 
     private long[] m_BitBoards;
 
+    private long m_WhiteOccupancy;
+    private long m_BlackOccupancy;
+    private int m_SideToMove;
+    private int m_CastlingRights;
+    private int m_EnPassantSquare;
+    private int m_HalfmoveClock;
+    private int m_FullmoveNumber;
+
     public Position()
     {
         SetStartingPosition();
@@ -22,6 +30,77 @@ public class Position
     public void SetStartingPosition()
     {
         SetPosition(STARTING_FEN);
+    }
+
+    public String ToFen()
+    {
+        StringBuilder fen = new StringBuilder();
+
+        // Add pieces to fen
+        for (int rank = 7; rank >= 0; rank--)
+        {
+            int emptySquares = 0;
+            for (int file = 0; file < 8; file++)
+            {
+                int piece = GetPiece(rank * 8 + file);
+                if (piece == Piece.NONE)
+                {
+                    emptySquares++;
+                    continue;
+                }
+                if (emptySquares > 0)
+                {
+                    fen.append(emptySquares);
+                    emptySquares = 0;
+                }
+                fen.append(Piece.ToFenChar(piece));
+
+            }
+            if (emptySquares > 0)
+                fen.append(emptySquares);
+            if (rank > 0)
+                fen.append('/');
+        }
+
+        fen.append(' ');
+
+        fen.append(m_SideToMove == Piece.WHITE ? "w" : "b");
+
+        fen.append(' ');
+
+        if (m_CastlingRights == 0)
+            fen.append('-');
+        else
+        {
+            if ((m_CastlingRights & WHITE_KINGSIDE) != 0)
+                fen.append('K');
+            if ((m_CastlingRights & WHITE_QUEENSIDE) != 0)
+                fen.append('Q');
+            if ((m_CastlingRights & BLACK_KINGSIDE) != 0)
+                fen.append('k');
+            if ((m_CastlingRights & BLACK_QUEENSIDE) != 0)
+                fen.append('q');
+        }
+
+        fen.append(' ');
+
+        if (m_EnPassantSquare == NO_SQUARE)
+            fen.append('-');
+        else
+        {
+            fen.append((char)('a' + m_EnPassantSquare % 8));
+            fen.append((char)('1' + m_EnPassantSquare / 8));
+        }
+
+        fen.append(' ');
+
+        fen.append(m_HalfmoveClock);
+
+        fen.append(' ');
+
+        fen.append(m_FullmoveNumber);
+
+        return fen.toString();
     }
 
     public void SetPosition(String fen)
@@ -63,7 +142,26 @@ public class Position
         int halfmoveClock = ParseCounter(fenParts[4]);
         int fullmoveNumber = ParseCounter(fenParts[5]);
 
+        long whiteOccupancy = 0;
+        long blackOccupancy = 0;
+
+        for (int piece = Piece.WHITE_PAWN; piece <= Piece.WHITE_KING; piece++)
+        {
+            whiteOccupancy |= bitBoards[piece];
+        }
+        for (int piece = Piece.BLACK_PAWN; piece <= Piece.BLACK_KING; piece++)
+        {
+            blackOccupancy |= bitBoards[piece];
+        }
+
         m_BitBoards = bitBoards;
+        m_WhiteOccupancy = whiteOccupancy;
+        m_BlackOccupancy = blackOccupancy;
+        m_SideToMove = sideToMove;
+        m_CastlingRights = castlingRights;
+        m_EnPassantSquare = enPassantSquare;
+        m_HalfmoveClock = halfmoveClock;
+        m_FullmoveNumber = fullmoveNumber;
 
     }
 
@@ -161,5 +259,23 @@ public class Position
         return value;
     }
 
+    public int GetPiece(int square)
+    {
+        if (square < 0 || 63 < square)
+        {
+            throw new IllegalArgumentException("Invalid square: " + square);
+        }
+
+        long mask = 1L << square;
+
+        for (int piece = 0; piece < Piece.COUNT; piece++)
+        {
+            if ((m_BitBoards[piece] & mask) != 0)
+            {
+                return piece;
+            }
+        }
+        return Piece.NONE;
+    }
 
 }

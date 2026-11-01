@@ -74,7 +74,7 @@ class UCITest
     @ValueSource(strings = {
             "position", "position fen 8/8/8/8/8/8/8/8 w - - 0 1", "position startpos bogus",
             "position startpos moves e2e4 e7e4", "go depth", "go depth zero", "go depth 0",
-            "go depth 65", "go movetime 100"
+            "go depth 65", "go nodes 100", "go wtime -1", "go movestogo 0", "go wtime"
     })
     void reportsCommandErrorsAndContinuesReading(String command)
     {

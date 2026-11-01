@@ -28,8 +28,8 @@ Bare `go` uses depth 4. Input remains responsive during search, and EOF shuts
 down the worker. Incoming moves must be legal, including promotion suffixes
 such as `b7b8q`; a rejected move list leaves the previous position intact.
 
-This first search supports fixed depths from 1 to 64. Clock-based limits,
-pondering, quiescence, repetition and fifty-move draw detection, positional
+This search supports fixed depths from 1 to 64 and UCI clock/movetime limits.
+Pondering, quiescence, repetition and fifty-move draw detection, positional
 evaluation, and transposition tables remain future work.
 
 ## Tests

@@ -59,6 +59,13 @@ public class Engine
 
     public void StartSearch(int depth, Consumer<Search.Result> onComplete)
     {
+        StartSearch(depth, 0, onComplete);
+    }
+
+    public void StartSearch(int depth, long timeMillis, Consumer<Search.Result> onComplete)
+    {
+        if (timeMillis < 0 || timeMillis > 86_400_000)
+            throw new IllegalArgumentException("Invalid search time");
         if (depth < 1 || depth > Search.MAX_DEPTH)
             throw new IllegalArgumentException("Search depth must be between 1 and " + Search.MAX_DEPTH);
         StopSearch();
@@ -66,7 +73,7 @@ public class Engine
         searchPosition.SetPosition(m_Position.ToFen());
         Search search = new Search();
         m_Search = search;
-        m_SearchThread = new Thread(() -> onComplete.accept(search.FindBestMove(searchPosition, depth)), "lentus-search");
+        m_SearchThread = new Thread(() -> onComplete.accept(search.FindBestMove(searchPosition, depth, timeMillis)), "lentus-search");
         m_SearchThread.start();
     }
 

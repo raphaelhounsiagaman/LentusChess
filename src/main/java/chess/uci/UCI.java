@@ -13,16 +13,20 @@ import java.util.Scanner;
 
 public class UCI
 {
-    private static final int DEFAULT_DEPTH = 4;
     private final Engine m_Engine;
     private final Scanner m_Input;
     private final PrintStream m_Output;
 
     public UCI(Engine engine)
     {
+        this(engine, System.in, System.out);
+    }
+
+    public UCI(Engine engine, InputStream input, PrintStream output)
+    {
         m_Engine = engine;
-        m_Input = new Scanner(System.in);
-        m_Output = System.out;
+        m_Input = new Scanner(input);
+        m_Output = output;
     }
 
     public void run()
@@ -63,14 +67,10 @@ public class UCI
                     SetPosition(tokens);
                     break;
                 case "go":
-                    int depth = DEFAULT_DEPTH;
-                    if (tokens.length != 1)
-                    {
-                        if (tokens.length != 3 || !tokens[1].equals("depth"))
-                            throw new IllegalArgumentException("This version supports go depth <1..64> only");
-                        depth = Integer.parseInt(tokens[2]);
-                    }
-                    m_Engine.StartSearch(depth, this::SendResult);
+                    Position current = new Position();
+                    current.SetPosition(m_Engine.GetPositionFen());
+                    SearchLimits limits = SearchLimits.Parse(tokens, current.GetSideToMove());
+                    m_Engine.StartSearch(limits.depth(), limits.timeMillis(), this::SendResult);
                     break;
                 case "stop":
                     m_Engine.StopSearch();

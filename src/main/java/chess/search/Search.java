@@ -18,6 +18,8 @@ public class Search
     private final Evaluator m_Evaluator = new Evaluator();
     private volatile boolean m_Stop;
     private long m_Nodes;
+    private long m_Started;
+    private long m_BudgetNanos;
 
     public record Result(int bestMove, int score, int depth, long nodes)
     {
@@ -25,20 +27,31 @@ public class Search
 
     public Result FindBestMove(Position position, int maxDepth)
     {
+        return FindBestMove(position, maxDepth, 0);
+    }
+
+    public Result FindBestMove(Position position, int maxDepth, long timeMillis)
+    {
         if (maxDepth < 1 || maxDepth > MAX_DEPTH)
             throw new IllegalArgumentException("Search depth must be between 1 and " + MAX_DEPTH);
 
+        if (timeMillis < 0 || 86_400_000 < timeMillis)
+            throw new IllegalArgumentException("Search time must be between 0 and 86400000 milliseconds");
+
+        m_Started = System.nanoTime();
+        m_BudgetNanos = timeMillis * 1_000_000;
         m_Nodes = 0;
+
         List<Integer> moves = m_MoveGenerator.GenerateLegalMoves(position);
         if (moves.isEmpty())
             return new Result(Move.NONE, TerminalScore(position, 0), 0, 1);
 
         // Keep a legal fallback even if stop arrives before the first iteration completes.
         Result best = new Result(moves.getFirst(), m_Evaluator.Evaluate(position), 0, 0);
-        for (int depth = 1; depth <= maxDepth && !m_Stop; depth++)
+        for (int depth = 1; depth <= maxDepth && !ShouldStop(); depth++)
         {
             Result iteration = SearchRoot(position, moves, depth);
-            if (m_Stop)
+            if (ShouldStop())
                 break;
             best = iteration;
             Collections.swap(moves, 0, moves.indexOf(best.bestMove()));
@@ -51,6 +64,13 @@ public class Search
         m_Stop = true;
     }
 
+    private boolean ShouldStop()
+    {
+        if (m_BudgetNanos > 0 && System.nanoTime() - m_Started >= m_BudgetNanos)
+            m_Stop = true;
+        return m_Stop;
+    }
+
     private Result SearchRoot(Position position, List<Integer> moves, int depth)
     {
         m_Nodes++;
@@ -59,7 +79,7 @@ public class Search
         Position.UndoState undo = new Position.UndoState();
         for (int move : moves)
         {
-            if (m_Stop)
+            if (ShouldStop())
                 break;
 
             position.MakeMove(move, undo);
@@ -77,7 +97,7 @@ public class Search
 
     private int Negamax(Position position, int depth, int alpha, int beta, int ply)
     {
-        if (m_Stop)
+        if (ShouldStop())
             return 0;
         m_Nodes++;
 
@@ -91,7 +111,7 @@ public class Search
         Position.UndoState undo = new Position.UndoState();
         for (int move : moves)
         {
-            if (m_Stop)
+            if (ShouldStop())
                 return 0;
 
             position.MakeMove(move, undo);

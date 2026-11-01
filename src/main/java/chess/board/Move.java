@@ -23,14 +23,6 @@ public final class Move
 
     public static int Encode(int from, int to, int type)
     {
-        if (from < 0 || 63 < from  || to < 0 || 63 < to || from == to)
-        {
-            throw new IllegalArgumentException("Invalid move squares");
-        }
-        if (type < NORMAL || PROMOTE_QUEEN < type)
-        {
-            throw new IllegalArgumentException("Invalid move type: " + type);
-        }
         return from | (to << 6) | (type << 12);
     }
 

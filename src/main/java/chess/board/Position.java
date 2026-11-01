@@ -250,11 +250,6 @@ public class Position
 
     public int GetPiece(int square)
     {
-        if (square < 0 || 63 < square)
-        {
-            throw new IllegalArgumentException("Invalid square: " + square);
-        }
-
         long mask = 1L << square;
 
         for (int piece = 0; piece < Piece.COUNT; piece++)

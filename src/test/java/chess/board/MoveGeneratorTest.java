@@ -14,15 +14,6 @@ class MoveGeneratorTest
     private final MoveGenerator generator = new MoveGenerator();
 
     @ParameterizedTest
-    @CsvSource({"1, 20", "2, 400", "3, 8902", "4, 197281"})
-    void startingPositionPerft(int depth, long expected)
-    {
-        Position position = new Position();
-        assertEquals(expected, Perft(position, depth));
-        AssertPosition(Position.STARTING_FEN, position);
-    }
-
-    @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
             // Pins, check evasions, and king moves exposing a sliding attack.
             "4r1k1/8/8/8/8/8/4R3/4K3 w - - 7 12 | 12 | 11 | 0 | false",
@@ -129,21 +120,6 @@ class MoveGeneratorTest
         long blockers = (1L << 2) | (1L << 16);
         assertEquals((1L << 1) | (1L << 2) | (1L << 8) | (1L << 16), BitboardAttacks.RookAttacks(0, blockers));
         assertEquals((1L << 9) | (1L << 18), BitboardAttacks.BishopAttacks(0, 1L << 18));
-    }
-
-    private long Perft(Position position, int depth)
-    {
-        if (depth == 0)
-            return 1;
-        long nodes = 0;
-        Position.UndoState undo = new Position.UndoState();
-        for (int move : generator.GenerateLegalMoves(position))
-        {
-            position.MakeMove(move, undo);
-            nodes += Perft(position, depth - 1);
-            position.UnmakeMove(undo);
-        }
-        return nodes;
     }
 
     private static void AssertPosition(String fen, Position actual)

@@ -34,7 +34,7 @@ public class Position
 
     public static final class UndoState
     {
-        private int move, piece, placedPiece, captured;
+        private int move, piece, placedPiece, captured, capturedSquare;
         private int castlingRights, enPassantSquare, halfmoveClock, fullmoveNumber;
     }
 
@@ -44,7 +44,9 @@ public class Position
         int to = Move.GetTo(move);
         int type = Move.GetType(move);
         int piece = GetPiece(from);
-        int captured = GetPiece(to);
+        int capturedSquare = type == Move.EN_PASSANT
+                ? to + (m_SideToMove == Piece.WHITE ? -8 : 8) : to;
+        int captured = GetPiece(capturedSquare);
 
         boolean pawn = (piece == Piece.WHITE_PAWN || piece == Piece.BLACK_PAWN);
 
@@ -60,13 +62,14 @@ public class Position
         undo.piece = piece;
         undo.placedPiece = placedPiece;
         undo.captured = captured;
+        undo.capturedSquare = capturedSquare;
         undo.castlingRights = m_CastlingRights;
         undo.enPassantSquare = m_EnPassantSquare;
         undo.halfmoveClock = m_HalfmoveClock;
         undo.fullmoveNumber = m_FullmoveNumber;
 
         if (captured != Piece.NONE)
-            TogglePiece(captured, 1L << to);
+            TogglePiece(captured, 1L << capturedSquare);
 
         TogglePiece(piece, 1L << from);
         TogglePiece(placedPiece, 1L << to);
@@ -84,7 +87,7 @@ public class Position
         TogglePiece(undo.placedPiece, 1L << to);
         TogglePiece(undo.piece, 1L << from);
         if (undo.captured != Piece.NONE)
-            TogglePiece(undo.captured, 1L << to);
+            TogglePiece(undo.captured, 1L << undo.capturedSquare);
         m_CastlingRights = undo.castlingRights;
         m_EnPassantSquare = undo.enPassantSquare;
         m_HalfmoveClock = undo.halfmoveClock;

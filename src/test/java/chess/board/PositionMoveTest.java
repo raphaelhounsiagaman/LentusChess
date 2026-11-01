@@ -31,6 +31,46 @@ class PositionMoveTest
         AssertPosition(before, position);
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "r3k2r/8/8/3pP3/8/8/8/R3K2R w KQkq d6 0 19 | 36 | 43 | r3k2r/8/3P4/8/8/8/8/R3K2R b KQkq - 0 19",
+            "r3k2r/8/8/4Pp2/8/8/8/R3K2R w KQkq f6 0 19 | 36 | 45 | r3k2r/8/5P2/8/8/8/8/R3K2R b KQkq - 0 19",
+            "r3k2r/8/8/8/2Pp4/8/8/R3K2R b KQkq c3 0 19 | 27 | 18 | r3k2r/8/8/8/8/2p5/8/R3K2R w KQkq - 0 20",
+            "r3k2r/8/8/8/3pP3/8/8/R3K2R b KQkq e3 0 19 | 27 | 20 | r3k2r/8/8/8/8/4p3/8/R3K2R w KQkq - 0 20"
+    })
+    void enPassantMovesUpdateAndRestoreAllState(String before, int from, int to, String after)
+    {
+        Position position = new Position();
+        position.SetPosition(before);
+        Position.UndoState undo = new Position.UndoState();
+        position.MakeMove(Move.Encode(from, to, Move.EN_PASSANT), undo);
+        AssertPosition(after, position);
+        position.UnmakeMove(undo);
+        AssertPosition(before, position);
+    }
+
+    @Test
+    void enPassantAfterDoublePushSupportsNestedUndoAndReuse()
+    {
+        String before = "r3k2r/3p4/8/4P3/8/8/8/R3K2R b KQkq - 7 19";
+        String afterPush = "r3k2r/8/8/3pP3/8/8/8/R3K2R w KQkq d6 0 20";
+        Position position = new Position();
+        position.SetPosition(before);
+        Position.UndoState push = new Position.UndoState();
+        Position.UndoState capture = new Position.UndoState();
+        for (int repetition = 0; repetition < 2; repetition++)
+        {
+            position.MakeMove(Move.Encode(51, 35, Move.NORMAL), push);
+            AssertPosition(afterPush, position);
+            position.MakeMove(Move.Encode(36, 43, Move.EN_PASSANT), capture);
+            AssertPosition("r3k2r/8/3P4/8/8/8/8/R3K2R b KQkq - 0 20", position);
+            position.UnmakeMove(capture);
+            AssertPosition(afterPush, position);
+            position.UnmakeMove(push);
+            AssertPosition(before, position);
+        }
+    }
+
     @Test
     void undoRecordsSupportNestedMovesAndReuse()
     {

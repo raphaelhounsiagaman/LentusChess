@@ -1,0 +1,97 @@
+package chess;
+
+import chess.board.Move;
+import chess.board.Position;
+import chess.search.Search;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@Timeout(10)
+class EngineTest
+{
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1 | e1g1 | r3k2r/8/8/8/8/8/8/R4RK1 b kq - 1 1",
+            "k7/8/8/3pP3/8/8/8/4K3 w - d6 0 1 | e5d6 | k7/8/3P4/8/8/8/8/4K3 b - - 0 1",
+            "4k3/1P6/8/8/8/8/8/4K3 w - - 0 1 | b7b8n | 1N2k3/8/8/8/8/8/8/4K3 b - - 0 1"
+    })
+    void resolvesSpecialMovesFromUciNotation(String fen, String move, String expected)
+    {
+        Engine engine = new Engine();
+        engine.SetPosition(fen, List.of(move));
+        assertEquals(expected, engine.GetPositionFen());
+    }
+
+    @Test
+    void anIllegalMoveDoesNotInstallAPartiallyAppliedPosition()
+    {
+        Engine engine = new Engine();
+        engine.SetPosition(Position.STARTING_FEN, List.of("d2d4"));
+        String before = engine.GetPositionFen();
+        assertThrows(IllegalArgumentException.class,
+                () -> engine.SetPosition(Position.STARTING_FEN, List.of("e2e4", "e7e4")));
+        assertEquals(before, engine.GetPositionFen());
+        engine.NewGame();
+        assertEquals(Position.STARTING_FEN, engine.GetPositionFen());
+    }
+
+    @Test
+    void searchCompletesWithoutPlayingItsMove() throws InterruptedException
+    {
+        Engine engine = new Engine();
+        String fen = "4k3/8/8/8/8/8/q7/R3K3 w - - 0 1";
+        engine.SetPosition(fen, List.of());
+        LinkedBlockingQueue<Search.Result> results = new LinkedBlockingQueue<>();
+        try
+        {
+            engine.StartSearch(2, results::add);
+            Search.Result result = results.poll(5, TimeUnit.SECONDS);
+            assertNotNull(result);
+            assertEquals("a1a2", Move.ToUci(result.bestMove()));
+            assertEquals(2, result.depth());
+            assertEquals(fen, engine.GetPositionFen());
+        }
+        finally
+        {
+            engine.StopSearch();
+        }
+        assertTrue(results.isEmpty(), "Only one completion per search");
+    }
+
+    @Test
+    void stopAndNewGameJoinTheWorkerAndAllowAnotherSearch() throws InterruptedException
+    {
+        Engine engine = new Engine();
+        LinkedBlockingQueue<Search.Result> results = new LinkedBlockingQueue<>();
+        try
+        {
+            engine.StartSearch(Search.MAX_DEPTH, results::add);
+            engine.StopSearch();
+            assertNotNull(results.poll());
+            engine.StopSearch();
+            assertTrue(results.isEmpty());
+
+            engine.StartSearch(Search.MAX_DEPTH, results::add);
+            engine.NewGame();
+            assertNotNull(results.poll());
+            assertEquals(Position.STARTING_FEN, engine.GetPositionFen());
+
+            engine.StartSearch(1, results::add);
+            Search.Result result = results.poll(5, TimeUnit.SECONDS);
+            assertNotNull(result);
+            assertEquals(1, result.depth());
+        }
+        finally
+        {
+            engine.StopSearch();
+        }
+    }
+}

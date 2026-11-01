@@ -1,11 +1,29 @@
 package chess.board;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MoveTest
 {
+    @ParameterizedTest
+    @CsvSource({
+            "12, 28, 0, e2e4", "60, 58, 1, e8c8", "36, 43, 2, e5d6",
+            "49, 57, 3, b7b8n", "49, 57, 4, b7b8b", "49, 57, 5, b7b8r", "49, 57, 6, b7b8q"
+    })
+    void formatsUciMoves(int from, int to, int type, String expected)
+    {
+        assertEquals(expected, Move.ToUci(Move.Encode(from, to, type)));
+    }
+
+    @Test
+    void formatsNoMoveAsUciNullMove()
+    {
+        assertEquals("0000", Move.ToUci(Move.NONE));
+    }
+
     @Test
     void everySquarePairAndMoveTypeHasADistinctCompactEncoding()
     {

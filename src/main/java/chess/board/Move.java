@@ -40,4 +40,18 @@ public final class Move
     {
         return (move >>> 12) & 7;
     }
+
+    public static String ToUci(int move)
+    {
+        if (move == NONE)
+            return "0000";
+        int from = GetFrom(move);
+        int to = GetTo(move);
+        String text = "" + (char) ('a' + from % 8) + (char) ('1' + from / 8)
+                + (char) ('a' + to % 8) + (char) ('1' + to / 8);
+        int type = GetType(move);
+        if (type >= PROMOTE_KNIGHT && type <= PROMOTE_QUEEN)
+            text += "nbrq".charAt(type - PROMOTE_KNIGHT);
+        return text;
+    }
 }

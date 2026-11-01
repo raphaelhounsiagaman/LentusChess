@@ -73,6 +73,8 @@ public class Position
 
         TogglePiece(piece, 1L << from);
         TogglePiece(placedPiece, 1L << to);
+        if (type == Move.CASTLING)
+            ToggleCastlingRook(piece, from, to);
         m_CastlingRights &= ~(CastlingRightsAt(from) | CastlingRightsAt(to));
         m_EnPassantSquare = pawn && Math.abs(to - from) == 16 ? (from + to) / 2 : NO_SQUARE;
         m_HalfmoveClock = halfmoveClock;
@@ -88,11 +90,21 @@ public class Position
         TogglePiece(undo.piece, 1L << from);
         if (undo.captured != Piece.NONE)
             TogglePiece(undo.captured, 1L << undo.capturedSquare);
+        if (Move.GetType(undo.move) == Move.CASTLING)
+            ToggleCastlingRook(undo.piece, from, to);
         m_CastlingRights = undo.castlingRights;
         m_EnPassantSquare = undo.enPassantSquare;
         m_HalfmoveClock = undo.halfmoveClock;
         m_FullmoveNumber = undo.fullmoveNumber;
         m_SideToMove ^= 1;
+    }
+
+    private void ToggleCastlingRook(int king, int from, int to)
+    {
+        int rookFrom = to > from ? from + 3 : from - 4;
+        int rookTo = to > from ? from + 1 : from - 1;
+        int rook = king == Piece.WHITE_KING ? Piece.WHITE_ROOK : Piece.BLACK_ROOK;
+        TogglePiece(rook, (1L << rookFrom) | (1L << rookTo));
     }
 
     private void TogglePiece(int piece, long squares)

@@ -71,6 +71,48 @@ class PositionMoveTest
         }
     }
 
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 7 19 | 4 | 6 | r3k2r/8/8/8/8/8/8/R4RK1 b kq - 8 19",
+            "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 7 19 | 4 | 2 | r3k2r/8/8/8/8/8/8/2KR3R b kq - 8 19",
+            "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 7 19 | 60 | 62 | r4rk1/8/8/8/8/8/8/R3K2R w KQ - 8 20",
+            "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 7 19 | 60 | 58 | 2kr3r/8/8/8/8/8/8/R3K2R w KQ - 8 20",
+            "r3k2r/8/8/3p4/8/8/8/R3K2R w KQkq d6 0 19 | 4 | 6 | r3k2r/8/8/3p4/8/8/8/R4RK1 b kq - 1 19",
+            "r3k2r/8/8/8/4P3/8/8/R3K2R b KQkq e3 0 19 | 60 | 58 | 2kr3r/8/8/8/4P3/8/8/R3K2R w KQ - 1 20"
+    })
+    void castlingMovesUpdateAndRestoreAllState(String before, int from, int to, String after)
+    {
+        Position position = new Position();
+        position.SetPosition(before);
+        Position.UndoState undo = new Position.UndoState();
+        position.MakeMove(Move.Encode(from, to, Move.CASTLING), undo);
+        AssertPosition(after, position);
+        position.UnmakeMove(undo);
+        AssertPosition(before, position);
+    }
+
+    @Test
+    void castlingSupportsNestedUndoAndReuse()
+    {
+        String before = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 7 19";
+        String afterWhite = "r3k2r/8/8/8/8/8/8/R4RK1 b kq - 8 19";
+        Position position = new Position();
+        position.SetPosition(before);
+        Position.UndoState white = new Position.UndoState();
+        Position.UndoState black = new Position.UndoState();
+        for (int repetition = 0; repetition < 2; repetition++)
+        {
+            position.MakeMove(Move.Encode(4, 6, Move.CASTLING), white);
+            AssertPosition(afterWhite, position);
+            position.MakeMove(Move.Encode(60, 58, Move.CASTLING), black);
+            AssertPosition("2kr3r/8/8/8/8/8/8/R4RK1 w - - 9 20", position);
+            position.UnmakeMove(black);
+            AssertPosition(afterWhite, position);
+            position.UnmakeMove(white);
+            AssertPosition(before, position);
+        }
+    }
+
     @Test
     void undoRecordsSupportNestedMovesAndReuse()
     {

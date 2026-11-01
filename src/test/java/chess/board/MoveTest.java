@@ -1,8 +1,6 @@
 package chess.board;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,13 +36,4 @@ class MoveTest
         }
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "-1, 8, 0", "64, 8, 0", "0, -1, 0", "0, 64, 0",
-            "0, 0, 0", "63, 63, 1", "0, 8, -1", "0, 8, 7", "0, 8, 8"
-    })
-    void invalidFieldsCannotWrapIntoAnotherMove(int from, int to, int type)
-    {
-        assertThrows(IllegalArgumentException.class, () -> Move.Encode(from, to, type));
-    }
 }

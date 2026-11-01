@@ -2,7 +2,7 @@ package chess.board;
 
 /**
  * Source in bits 0-5, destination in 6-11, type in 12-14.
- * Squares use a1 = 0, b1 = 2, ... through h8 = 63.
+ * Squares use a1 = 0, b1 = 1, ... through h8 = 63.
  */
 public final class Move
 {

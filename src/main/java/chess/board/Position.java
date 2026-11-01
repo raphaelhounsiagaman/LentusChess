@@ -32,6 +32,89 @@ public class Position
         SetPosition(STARTING_FEN);
     }
 
+    public static final class UndoState
+    {
+        private int move, piece, placedPiece, captured;
+        private int castlingRights, enPassantSquare, halfmoveClock, fullmoveNumber;
+    }
+
+    public void MakeMove(int move, UndoState undo)
+    {
+        int from = Move.GetFrom(move);
+        int to = Move.GetTo(move);
+        int type = Move.GetType(move);
+        int piece = GetPiece(from);
+        int captured = GetPiece(to);
+
+        boolean pawn = (piece == Piece.WHITE_PAWN || piece == Piece.BLACK_PAWN);
+
+        // Figures out what piece needs to be placed
+        int placedPiece = type >= Move.PROMOTE_KNIGHT
+                ? m_SideToMove * 6 + Piece.WHITE_KNIGHT + type - Move.PROMOTE_KNIGHT : piece;
+
+        int halfmoveClock = pawn || captured != Piece.NONE ? 0 : m_HalfmoveClock + 1;
+        int fullmoveNumber = m_SideToMove == Piece.BLACK
+                ? m_FullmoveNumber + 1 : m_FullmoveNumber;
+
+        undo.move = move;
+        undo.piece = piece;
+        undo.placedPiece = placedPiece;
+        undo.captured = captured;
+        undo.castlingRights = m_CastlingRights;
+        undo.enPassantSquare = m_EnPassantSquare;
+        undo.halfmoveClock = m_HalfmoveClock;
+        undo.fullmoveNumber = m_FullmoveNumber;
+
+        if (captured != Piece.NONE)
+            TogglePiece(captured, 1L << to);
+
+        TogglePiece(piece, 1L << from);
+        TogglePiece(placedPiece, 1L << to);
+        m_CastlingRights &= ~(CastlingRightsAt(from) | CastlingRightsAt(to));
+        m_EnPassantSquare = pawn && Math.abs(to - from) == 16 ? (from + to) / 2 : NO_SQUARE;
+        m_HalfmoveClock = halfmoveClock;
+        m_FullmoveNumber = fullmoveNumber;
+        m_SideToMove ^= 1;
+    }
+
+    public void UnmakeMove(UndoState undo)
+    {
+        int from = Move.GetFrom(undo.move);
+        int to = Move.GetTo(undo.move);
+        TogglePiece(undo.placedPiece, 1L << to);
+        TogglePiece(undo.piece, 1L << from);
+        if (undo.captured != Piece.NONE)
+            TogglePiece(undo.captured, 1L << to);
+        m_CastlingRights = undo.castlingRights;
+        m_EnPassantSquare = undo.enPassantSquare;
+        m_HalfmoveClock = undo.halfmoveClock;
+        m_FullmoveNumber = undo.fullmoveNumber;
+        m_SideToMove ^= 1;
+    }
+
+    private void TogglePiece(int piece, long squares)
+    {
+        m_BitBoards[piece] ^= squares;
+        if (piece < Piece.BLACK_PAWN)
+            m_WhiteOccupancy ^= squares;
+        else
+            m_BlackOccupancy ^= squares;
+    }
+
+    private static int CastlingRightsAt(int square)
+    {
+        return switch (square)
+        {
+            case 0 -> WHITE_QUEENSIDE;
+            case 4 -> WHITE_KINGSIDE | WHITE_QUEENSIDE;
+            case 7 -> WHITE_KINGSIDE;
+            case 56 -> BLACK_QUEENSIDE;
+            case 60 -> BLACK_KINGSIDE | BLACK_QUEENSIDE;
+            case 63 -> BLACK_KINGSIDE;
+            default -> 0;
+        };
+    }
+
     public String ToFen()
     {
         StringBuilder fen = new StringBuilder();

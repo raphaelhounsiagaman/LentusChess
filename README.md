@@ -35,7 +35,7 @@ From a clean checkout, compile the engine, run the tests, and package the releas
 .\gradlew.bat clean build --no-build-cache
 ```
 
-The runnable JAR is `build\libs\LentusChess-0.1.0.jar`, with `chess.Main` as its
+The runnable JAR is `build\libs\LentusChess-0.1.1.jar`, with `chess.Main` as its
 entry point. It has no external runtime dependencies, so it can be copied and
 launched wherever Java 25 is installed.
 
@@ -44,13 +44,13 @@ launched wherever Java 25 is installed.
 Check the packaged engine's UCI handshake:
 
 ```powershell
-"uci`nisready`nquit" | java -jar .\build\libs\LentusChess-0.1.0.jar
+"uci`nisready`nquit" | java -jar .\build\libs\LentusChess-0.1.1.jar
 ```
 
 Expected output:
 
 ```text
-id name LentusChess 0.1.0
+id name LentusChess 0.1.1
 id author Raphael Hounsiagaman
 uciok
 readyok
@@ -59,7 +59,7 @@ readyok
 Start the interactive UCI console:
 
 ```powershell
-java -jar .\build\libs\LentusChess-0.1.0.jar
+java -jar .\build\libs\LentusChess-0.1.1.jar
 ```
 
 Enter commands interactively:
@@ -138,9 +138,9 @@ rate.
 After building, launch the standalone benchmark from PowerShell:
 
 ```powershell
-java -jar .\build\libs\LentusChess-0.1.0.jar bench
-java -jar .\build\libs\LentusChess-0.1.0.jar bench depth 4 warmup 2 repeat 5
-java -jar .\build\libs\LentusChess-0.1.0.jar bench --help
+java -jar .\build\libs\LentusChess-0.1.1.jar bench
+java -jar .\build\libs\LentusChess-0.1.1.jar bench depth 4 warmup 2 repeat 5
+java -jar .\build\libs\LentusChess-0.1.1.jar bench --help
 ```
 
 Defaults are depth 4, two warmup passes, and five measured passes. Options may
@@ -189,7 +189,7 @@ environment when comparing JARs byte for byte.
 Calculate the release checksum with:
 
 ```powershell
-Get-FileHash .\build\libs\LentusChess-0.1.0.jar -Algorithm SHA256
+Get-FileHash .\build\libs\LentusChess-0.1.1.jar -Algorithm SHA256
 ```
 
 Preserve the baseline JAR and its checksum outside `build`, which `clean`

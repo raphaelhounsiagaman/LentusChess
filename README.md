@@ -108,6 +108,31 @@ depth 4. This prepares the position data for the future benchmark command.
 | 4 | 15,072,328 |
 | 5 | 574,453,633 |
 
+## Benchmark runner
+
+The Java API runs a suite on the calling thread and returns immutable results:
+
+```java
+var result = new PerftBenchmark().Run(PerftSuite.Load(), 4, 2, 5);
+long totalNodes = result.TotalNodes();
+double nodesPerSecond = result.NodesPerSecond();
+```
+
+The arguments after the suite are depth, warmup passes, and measured passes.
+Depths 1 through 5 are supported; warmup may be zero and at least one measured
+pass is required. Each pass visits all positions in their supplied order.
+Positions are prepared before warmup. Only the perft traversals in measured
+passes are timed; verification and result construction happen afterward.
+Node counts and restored FEN state are checked after each traversal, including
+warmup. A mismatch fails the run with the position ID, FEN, and count details.
+
+Results contain each position's nodes and elapsed nanoseconds, each measured
+pass, total nodes and time, aggregate nodes/second, and median pass time.
+Rates use total nodes divided by total traversal time. Speed at the median time
+uses the median pass duration; for an even number of passes, that duration is
+the mean of the two middle times. A zero elapsed time produces `NaN` for the
+rate. The command-line interface and report output will be added separately.
+
 ## Tests
 
 ```powershell

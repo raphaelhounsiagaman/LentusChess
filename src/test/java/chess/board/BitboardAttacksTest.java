@@ -1,6 +1,5 @@
 package chess.board;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -70,50 +69,55 @@ class BitboardAttacksTest
         assertEquals(bishop ? 5_248 : 102_400, totalSubsets);
     }
 
-    @Test
-    void bishopMagicMatchesRayAttacksForEveryRelevantBlockerSubset()
+    @ParameterizedTest(name = "bishop = {0}")
+    @ValueSource(booleans = {true, false})
+    void magicMatchesRayAttacksForEveryRelevantBlockerSubset(boolean bishop)
     {
         for (int square = 0; square < 64; square++)
         {
-            long mask = BitboardAttacks.BishopOccupancyMask(square);
+            long mask = OccupancyMask(bishop, square);
             long subset = 0;
             do
             {
-                AssertBishopAttacks(square, subset);
-                AssertBishopAttacks(square, subset | ~mask);
+                AssertSlidingAttacks(bishop, square, subset);
+                AssertSlidingAttacks(bishop, square, subset | ~mask);
                 subset = (subset - mask) & mask;
             }
             while (subset != 0);
         }
     }
 
-    @Test
-    void bishopMagicMatchesRayAttacksForFullBoardOccupancies()
+    @ParameterizedTest(name = "bishop = {0}")
+    @ValueSource(booleans = {true, false})
+    void magicMatchesRayAttacksForFullBoardOccupancies(boolean bishop)
     {
         Random random = new Random(0xB15B0A4DL);
         for (int square = 0; square < 64; square++)
         {
-            AssertBishopAttacks(square, 0);
-            AssertBishopAttacks(square, -1L);
-            AssertBishopAttacks(square, Long.MIN_VALUE);
+            AssertSlidingAttacks(bishop, square, 0);
+            AssertSlidingAttacks(bishop, square, -1L);
+            AssertSlidingAttacks(bishop, square, Long.MIN_VALUE);
             for (int sample = 0; sample < 256; sample++)
-                AssertBishopAttacks(square, random.nextLong());
+                AssertSlidingAttacks(bishop, square, random.nextLong());
         }
     }
 
-    private static void AssertBishopAttacks(int square, long occupancy)
+    private static void AssertSlidingAttacks(boolean bishop, int square, long occupancy)
     {
-        assertEquals(BishopRayAttacks(square, occupancy), BitboardAttacks.BishopAttacks(square, occupancy),
+        assertEquals(SlidingRayAttacks(bishop, square, occupancy), Attacks(bishop, square, occupancy),
                 () -> "Origin " + square + ", occupancy " + Long.toUnsignedString(occupancy, 16));
     }
 
-    private static long BishopRayAttacks(int square, long occupancy)
+    private static long SlidingRayAttacks(boolean bishop, int square, long occupancy)
     {
         long attacks = 0;
-        for (int fileStep = -1; fileStep <= 1; fileStep += 2)
+        for (int fileStep = -1; fileStep <= 1; fileStep++)
         {
-            for (int rankStep = -1; rankStep <= 1; rankStep += 2)
+            for (int rankStep = -1; rankStep <= 1; rankStep++)
             {
+                // Bishops change both coordinates; rooks change exactly one.
+                if (Math.abs(fileStep) + Math.abs(rankStep) != (bishop ? 2 : 1))
+                    continue;
                 int file = square % 8 + fileStep;
                 int rank = square / 8 + rankStep;
                 while (file >= 0 && file < 8 && rank >= 0 && rank < 8)

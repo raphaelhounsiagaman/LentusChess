@@ -92,6 +92,38 @@ class EngineTest
     }
 
     @Test
+    void searchReceivesRepetitionsThatTheSameFenAloneCannotRepresent() throws InterruptedException
+    {
+        Engine engine = new Engine();
+        engine.SetPosition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1",
+                List.of("g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"));
+        String fen = engine.GetPositionFen();
+        long[] history = engine.GetPositionSnapshot().GetPositionHistory();
+        LinkedBlockingQueue<Search.Result> results = new LinkedBlockingQueue<>();
+        try
+        {
+            engine.StartSearch(1, results::add);
+            Search.Result repeated = results.poll(5, TimeUnit.SECONDS);
+            assertNotNull(repeated);
+            assertEquals(0, repeated.score());
+            assertNotEquals(Move.NONE, repeated.bestMove());
+            assertTrue(repeated.historyDependent());
+            assertArrayEquals(history, engine.GetPositionSnapshot().GetPositionHistory());
+
+            engine.SetPosition(fen, List.of());
+            engine.StartSearch(1, results::add);
+            Search.Result fresh = results.poll(5, TimeUnit.SECONDS);
+            assertNotNull(fresh);
+            assertEquals(-900, fresh.score());
+            assertFalse(fresh.historyDependent());
+        }
+        finally
+        {
+            engine.StopSearch();
+        }
+    }
+
+    @Test
     void stopAndNewGameJoinTheWorkerAndAllowAnotherSearch() throws InterruptedException
     {
         Engine engine = new Engine();

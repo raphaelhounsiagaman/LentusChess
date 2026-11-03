@@ -1,5 +1,6 @@
 package chess.search;
 
+import chess.board.DrawReason;
 import chess.board.Move;
 import chess.board.MoveGenerator;
 import chess.board.Piece;
@@ -143,6 +144,8 @@ class SearchTest
         List<Integer> moves = generator.GenerateLegalMoves(position);
         if (moves.isEmpty())
             return generator.IsInCheck(position, position.GetSideToMove()) ? -Search.MATE_SCORE + ply : 0;
+        if (position.GetDrawReason() != DrawReason.NONE)
+            return 0;
         if (depth == 0)
             return new Evaluator().Evaluate(position);
         int best = Integer.MIN_VALUE;

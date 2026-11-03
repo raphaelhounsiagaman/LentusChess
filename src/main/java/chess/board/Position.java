@@ -377,6 +377,52 @@ public class Position
         return Arrays.copyOf(m_PositionHistory, m_HistorySize);
     }
 
+    public DrawReason GetDrawReason()
+    {
+        // Prefer a board-only reason when it suffices, regardless of the history.
+        if (HasInsufficientMaterial())
+            return DrawReason.INSUFFICIENT_MATERIAL;
+        if (m_HalfmoveClock >= 100)
+            return DrawReason.FIFTY_MOVE_RULE;
+        if (IsThreefoldRepetition())
+            return DrawReason.THREEFOLD_REPETITION;
+        return DrawReason.NONE;
+    }
+
+    private boolean IsThreefoldRepetition()
+    {
+        int occurrences = 1; // Include the current position.
+        int current = m_HistorySize - 1;
+        int first = Math.max(0, current - m_HalfmoveClock);
+        // Only the same side to move can repeat; pawn moves and captures end the scan.
+        for (int index = current - 2; index >= first; index -= 2)
+        {
+            if (m_PositionHistory[index] == m_PositionKey && ++occurrences == 3)
+                return true;
+        }
+        return false;
+    }
+
+    private boolean HasInsufficientMaterial()
+    {
+        long pawnsRooksQueens = m_BitBoards[Piece.WHITE_PAWN] | m_BitBoards[Piece.BLACK_PAWN]
+                | m_BitBoards[Piece.WHITE_ROOK] | m_BitBoards[Piece.BLACK_ROOK]
+                | m_BitBoards[Piece.WHITE_QUEEN] | m_BitBoards[Piece.BLACK_QUEEN];
+        if (pawnsRooksQueens != 0)
+            return false;
+
+        long knights = m_BitBoards[Piece.WHITE_KNIGHT] | m_BitBoards[Piece.BLACK_KNIGHT];
+        long bishops = m_BitBoards[Piece.WHITE_BISHOP] | m_BitBoards[Piece.BLACK_BISHOP];
+        if (Long.bitCount(knights | bishops) <= 1)
+            return true;
+        if (knights != 0)
+            return false;
+
+        // With only kings and bishops, all bishops must occupy the same square color.
+        long darkSquares = 0xAA55AA55AA55AA55L;
+        return (bishops & darkSquares) == 0 || (bishops & ~darkSquares) == 0;
+    }
+
     private long[] ParsePlacement(String placement)
     {
         long[] bitBoards = new long[Piece.COUNT];

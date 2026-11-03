@@ -64,7 +64,7 @@ public class Engine
 
     public void StartSearch(int depth, long timeMillis, Consumer<Search.Result> onComplete)
     {
-        if (timeMillis < 0 || timeMillis > 86_400_000)
+        if (timeMillis < 0 || 86_400_000 < timeMillis)
             throw new IllegalArgumentException("Invalid search time");
         if (depth < 1 || depth > Search.MAX_DEPTH)
             throw new IllegalArgumentException("Search depth must be between 1 and " + Search.MAX_DEPTH);

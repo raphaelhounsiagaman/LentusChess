@@ -53,7 +53,8 @@ public class UCI
             switch (tokens[0])
             {
                 case "uci":
-                    Send("id name LentusChess");
+                    String version = UCI.class.getPackage().getImplementationVersion();
+                    Send("id name LentusChess " + (version == null ? "dev" : version));
                     Send("id author Raphael Hounsiagaman");
                     Send("uciok");
                     break;

@@ -131,7 +131,36 @@ pass, total nodes and time, aggregate nodes/second, and median pass time.
 Rates use total nodes divided by total traversal time. Speed at the median time
 uses the median pass duration; for an even number of passes, that duration is
 the mean of the two middle times. A zero elapsed time produces `NaN` for the
-rate. The command-line interface and report output will be added separately.
+rate.
+
+## Benchmark command
+
+After building, launch the standalone benchmark from PowerShell:
+
+```powershell
+java -jar .\build\libs\LentusChess-0.1.0.jar bench
+java -jar .\build\libs\LentusChess-0.1.0.jar bench depth 4 warmup 2 repeat 5
+java -jar .\build\libs\LentusChess-0.1.0.jar bench --help
+```
+
+Defaults are depth 4, two warmup passes, and five measured passes. Options may
+appear in any order; unknown options, duplicate options, and invalid values
+are rejected. For a quick correctness check, use `bench depth 1 warmup 0 repeat 1`.
+This is a process argument, launched separately from the interactive UCI console.
+
+The command prints the suite, engine and Java versions, OS, JVM arguments, and
+run settings before starting. After the run it reports each measured pass,
+total measured nodes and time, aggregate nodes/second, median pass time, speed
+at the median time, and successful verification. Rates are rounded to whole
+nodes/second; an unmeasurably short interval is shown as `n/a`. Report output is
+outside the timed traversals. Depth 5 has roughly 38 times the nodes of depth 4.
+
+Exit status is 0 on success, 2 for invalid arguments, and 1 for a suite-loading,
+verification, or arithmetic failure. Errors go to standard error. Save the
+console report with PowerShell redirection if desired; CSV export is a later
+step. For comparisons, retain the source commit or JAR checksum alongside the
+report and keep the suite, depth, Java flags, hardware, and power settings
+consistent. Increase warmup if measured pass times are still improving.
 
 ## Tests
 

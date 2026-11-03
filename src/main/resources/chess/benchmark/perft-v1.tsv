@@ -1,0 +1,56 @@
+# LentusChess perft-v1: fixed order, 50 positions, reference leaf counts at depths 1-5.
+# Columns: id<TAB>six-field FEN<TAB>D1<TAB>D2<TAB>D3<TAB>D4<TAB>D5
+# First seven: https://chessprogramming.org/Perft_Results (accessed 2026-11-03).
+# Remaining IDs end in the source line number from Ethereal's standard perft suite:
+# https://github.com/AndyGrant/Ethereal/blob/ed4fe7aac5b5d31dd9a75dc7ead3a5f6f89cce30/src/perft/standard.epd
+# Preserve positions, order and counts within this version; create a new suite version for changes.
+startpos	rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1	20	400	8902	197281	4865609
+kiwipete	r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1	48	2039	97862	4085603	193690690
+rook-pawn-endgame	8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1	14	191	2812	43238	674624
+promotion-tactics-white	r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1	6	264	9467	422333	15833292
+promotion-tactics-black	r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1	6	264	9467	422333	15833292
+promotion-check-evasion	rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8	44	1486	62379	2103487	89941194
+middlegame-pins	r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10	46	2079	89890	3894594	164075551
+castling-003	4k3/8/8/8/8/8/8/4K2R w K - 0 1	15	66	1197	7059	133987
+castling-004	4k3/8/8/8/8/8/8/R3K3 w Q - 0 1	16	71	1287	7626	145232
+castling-009	8/8/8/8/8/8/6k1/4K2R w K - 0 1	12	38	564	2219	37735
+castling-010	8/8/8/8/8/8/1k6/R3K3 w Q - 0 1	15	65	1018	4573	80619
+castling-013	r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1	26	568	13744	314346	7594526
+castling-014	r3k2r/8/8/8/8/8/8/1R2K2R w Kkq - 0 1	25	567	14095	328965	8153719
+castling-022	4k2r/8/8/8/8/8/8/4K3 b k - 0 1	15	66	1197	7059	133987
+castling-023	r3k3/8/8/8/8/8/8/4K3 b q - 0 1	16	71	1287	7626	145232
+castling-025	r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1	26	112	3189	17945	532933
+castling-030	r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1	26	568	13744	314346	7594526
+knights-037	8/1n4N1/2k5/8/8/5K2/1N4n1/8 w - - 0 1	14	195	2760	38675	570726
+knights-038	8/1k6/8/5N2/8/4n3/8/2K5 w - - 0 1	11	156	1636	20534	223507
+knights-039	8/8/4k3/3Nn3/3nN3/4K3/8/8 w - - 0 1	19	289	4442	73584	1198299
+knights-040	K7/8/2n5/1n6/8/8/8/k6N w - - 0 1	3	51	345	5301	38348
+knights-041	k7/8/2N5/1N6/8/8/8/K6n w - - 0 1	17	54	835	5910	92250
+knights-042	8/1n4N1/2k5/8/8/5K2/1N4n1/8 b - - 0 1	15	193	2816	40039	582642
+knights-043	8/1k6/8/5N2/8/4n3/8/2K5 b - - 0 1	16	180	2290	24640	288141
+knights-044	8/8/3K4/3Nn3/3nN3/4k3/8/8 b - - 0 1	4	68	1118	16199	281190
+bishops-047	B6b/8/8/8/2K5/4k3/8/b6B w - - 0 1	17	278	4607	76778	1320507
+bishops-048	8/8/1B6/7b/7k/8/2B1b3/7K w - - 0 1	21	316	5744	93338	1713368
+bishops-049	k7/B7/1B6/1B6/8/8/8/K6b w - - 0 1	21	144	3242	32955	787524
+bishops-050	K7/b7/1b6/1b6/8/8/8/k6B w - - 0 1	7	143	1416	31787	310862
+bishops-051	B6b/8/8/8/2K5/5k2/8/b6B b - - 0 1	6	106	1829	31151	530585
+bishops-052	8/8/1B6/7b/7k/8/2B1b3/7K b - - 0 1	17	309	5133	93603	1591064
+rooks-055	7k/RR6/8/8/8/8/rr6/7K w - - 0 1	19	275	5300	104342	2161211
+rooks-056	R6r/8/8/2K5/5k2/8/8/r6R w - - 0 1	36	1027	29215	771461	20506480
+rooks-057	7k/RR6/8/8/8/8/rr6/7K b - - 0 1	19	275	5300	104342	2161211
+rooks-058	R6r/8/8/2K5/5k2/8/8/r6R b - - 0 1	36	1027	29227	771368	20521342
+queens-059	6kq/8/8/8/8/8/8/7K w - - 0 1	2	36	143	3637	14893
+queens-061	K7/8/8/3Q4/4q3/8/8/7k w - - 0 1	6	35	495	8349	166741
+queens-064	K7/8/8/3Q4/4q3/8/8/7k b - - 0 1	6	35	495	8349	166741
+pawns-069	8/2k1p3/3pP3/3P2K1/8/8/8/8 w - - 0 1	7	35	210	1091	7028
+pawns-074	8/2k1p3/3pP3/3P2K1/8/8/8/8 b - - 0 1	5	35	182	1091	5408
+pawns-075	8/8/8/8/8/4k3/4P3/4K3 w - - 0 1	2	8	44	282	1814
+pawns-079	8/8/3k4/3p4/3P4/3K4/8/8 w - - 0 1	5	25	180	1294	8296
+pawns-080	8/3k4/3p4/8/3P4/3K4/8/8 w - - 0 1	8	61	483	3213	23599
+pawns-091	k7/8/8/7p/6P1/8/8/K7 w - - 0 1	5	22	139	877	6112
+promotions-119	8/Pk6/8/8/8/8/6Kp/8 w - - 0 1	11	97	887	8048	90606
+promotions-120	n1n5/1Pk5/8/8/8/8/5Kp1/5N1N w - - 0 1	24	421	7421	124608	2193768
+promotions-121	8/PPPk4/8/8/8/8/4Kppp/8 w - - 0 1	18	270	4699	79355	1533145
+promotions-122	n1n5/PPPk4/8/8/8/8/4Kppp/5N1N w - - 0 1	24	496	9483	182838	3605103
+promotions-123	8/Pk6/8/8/8/8/6Kp/8 b - - 0 1	11	97	887	8048	90606
+promotions-124	n1n5/1Pk5/8/8/8/8/5Kp1/5N1N b - - 0 1	24	421	7421	124608	2193768

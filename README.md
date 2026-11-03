@@ -82,6 +82,86 @@ This search supports fixed depths from 1 to 64 and UCI clock/movetime limits.
 Pondering, quiescence, repetition and fifty-move draw detection, positional
 evaluation, and transposition tables remain future work.
 
+## Perft position suite
+
+The bundled `perft-v1` suite combines the seven positions already used by the
+perft tests with 43 selected castling, knight, bishop, rook, queen, pawn, and
+promotion positions. Kiwipete and the rook-and-pawn endgame also exercise en
+passant during traversal. Reference counts come from the
+[Chess Programming Wiki](https://chessprogramming.org/Perft_Results) and
+[Ethereal's standard perft suite](https://github.com/AndyGrant/Ethereal/blob/ed4fe7aac5b5d31dd9a75dc7ead3a5f6f89cce30/src/perft/standard.epd).
+The resource records its sources and the selected source line numbers. Preserve
+its positions, order, and counts within this version; use a new suite version
+when changing the workload.
+
+`PerftSuite.Load()` reads the packaged resource into an immutable list with
+stable IDs, six-field FENs, and reference leaf counts for depths 0 through 5.
+The loader rejects malformed entries, duplicate IDs or FENs, missing kings, and
+invalid counts. The suite tests compare every position against `Perft` through
+depth 4. This prepares the position data for the future benchmark command.
+
+| Depth | Reference nodes across all 50 positions |
+| --- | ---: |
+| 1 | 832 |
+| 2 | 16,095 |
+| 3 | 472,525 |
+| 4 | 15,072,328 |
+| 5 | 574,453,633 |
+
+## Benchmark runner
+
+The Java API runs a suite on the calling thread and returns immutable results:
+
+```java
+var result = new PerftBenchmark().Run(PerftSuite.Load(), 4, 2, 5);
+long totalNodes = result.TotalNodes();
+double nodesPerSecond = result.NodesPerSecond();
+```
+
+The arguments after the suite are depth, warmup passes, and measured passes.
+Depths 1 through 5 are supported; warmup may be zero and at least one measured
+pass is required. Each pass visits all positions in their supplied order.
+Positions are prepared before warmup. Only the perft traversals in measured
+passes are timed; verification and result construction happen afterward.
+Node counts and restored FEN state are checked after each traversal, including
+warmup. A mismatch fails the run with the position ID, FEN, and count details.
+
+Results contain each position's nodes and elapsed nanoseconds, each measured
+pass, total nodes and time, aggregate nodes/second, and median pass time.
+Rates use total nodes divided by total traversal time. Speed at the median time
+uses the median pass duration; for an even number of passes, that duration is
+the mean of the two middle times. A zero elapsed time produces `NaN` for the
+rate.
+
+## Benchmark command
+
+After building, launch the standalone benchmark from PowerShell:
+
+```powershell
+java -jar .\build\libs\LentusChess-0.1.0.jar bench
+java -jar .\build\libs\LentusChess-0.1.0.jar bench depth 4 warmup 2 repeat 5
+java -jar .\build\libs\LentusChess-0.1.0.jar bench --help
+```
+
+Defaults are depth 4, two warmup passes, and five measured passes. Options may
+appear in any order; unknown options, duplicate options, and invalid values
+are rejected. For a quick correctness check, use `bench depth 1 warmup 0 repeat 1`.
+This is a process argument, launched separately from the interactive UCI console.
+
+The command prints the suite, engine and Java versions, OS, JVM arguments, and
+run settings before starting. After the run it reports each measured pass,
+total measured nodes and time, aggregate nodes/second, median pass time, speed
+at the median time, and successful verification. Rates are rounded to whole
+nodes/second; an unmeasurably short interval is shown as `n/a`. Report output is
+outside the timed traversals. Depth 5 has roughly 38 times the nodes of depth 4.
+
+Exit status is 0 on success, 2 for invalid arguments, and 1 for a suite-loading,
+verification, or arithmetic failure. Errors go to standard error. Save the
+console report with PowerShell redirection if desired; CSV export is a later
+step. For comparisons, retain the source commit or JAR checksum alongside the
+report and keep the suite, depth, Java flags, hardware, and power settings
+consistent. Increase warmup if measured pass times are still improving.
+
 ## Tests
 
 ```powershell

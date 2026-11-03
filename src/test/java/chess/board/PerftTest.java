@@ -1,5 +1,6 @@
 package chess.board;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -15,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PerftTest
 {
     private final MoveGenerator generator = new MoveGenerator();
+    private final Perft perft = new Perft();
 
     // Indexed by depth, including the perft(0) convention of one leaf.
     // Keep every intervening depth: a matching deeper total can hide shallower errors.
@@ -48,7 +50,7 @@ class PerftTest
     {
         Position position = new Position();
         position.SetPosition(fen);
-        long actual = Perft(position, depth);
+        long actual = perft.Count(position, depth);
 
         AssertPosition(fen, position);
         // Only compute the root-move breakdown on failure, keeping passing runs inexpensive.
@@ -110,35 +112,18 @@ class PerftTest
     {
         Position position = new Position();
         position.SetPosition(fen);
-        assertEquals(1, Perft(position, 0));
-        assertEquals(0, Perft(position, 1));
-        assertEquals(0, Perft(position, 3));
+        assertEquals(1, perft.Count(position, 0));
+        assertEquals(0, perft.Count(position, 1));
+        assertEquals(0, perft.Count(position, 3));
         AssertPosition(fen, position);
     }
 
-    private long Perft(Position position, int depth)
+    @Test
+    void negativeDepthIsRejectedWithoutChangingPosition()
     {
-        if (depth == 0)
-            return 1;
-        List<Integer> moves = generator.GenerateLegalMoves(position);
-        if (depth == 1)
-            return moves.size();
-
-        long nodes = 0;
-        Position.UndoState undo = new Position.UndoState();
-        for (int move : moves)
-        {
-            position.MakeMove(move, undo);
-            try
-            {
-                nodes += Perft(position, depth - 1);
-            }
-            finally
-            {
-                position.UnmakeMove(undo);
-            }
-        }
-        return nodes;
+        Position position = new Position();
+        assertThrows(IllegalArgumentException.class, () -> perft.Count(position, -1));
+        AssertPosition(Position.STARTING_FEN, position);
     }
 
     // Counts events only on the last ply, as in the source tables.
@@ -198,7 +183,7 @@ class PerftTest
             position.MakeMove(move, undo);
             try
             {
-                nodes = Perft(position, depth - 1);
+                nodes = perft.Count(position, depth - 1);
             }
             finally
             {

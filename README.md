@@ -195,3 +195,8 @@ Get-FileHash .\build\libs\LentusChess-0.1.1.jar -Algorithm SHA256
 Preserve the baseline JAR and its checksum outside `build`, which `clean`
 deletes. A fresh checkout of the same baseline should pass the build, handshake,
 and interactive search checks above without an IDE.
+
+## License
+
+This project is licensed under the MIT License.
+See [LICENSE](LICENSE) for details.

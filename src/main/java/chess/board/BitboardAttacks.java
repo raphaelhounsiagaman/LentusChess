@@ -17,6 +17,8 @@ final class BitboardAttacks
     };
     private static final long[] KNIGHT_ATTACKS = BuildLeaperAttacks(KNIGHT_STEPS);
     private static final long[] KING_ATTACKS = BuildLeaperAttacks(KING_STEPS);
+    private static final long[] BISHOP_OCCUPANCY_MASKS = BuildOccupancyMasks(BISHOP_STEPS);
+    private static final long[] ROOK_OCCUPANCY_MASKS = BuildOccupancyMasks(ROOK_STEPS);
 
     private BitboardAttacks()
     {
@@ -49,6 +51,16 @@ final class BitboardAttacks
         return SlidingAttacks(square, occupancy, ROOK_STEPS);
     }
 
+    static long BishopOccupancyMask(int square)
+    {
+        return BISHOP_OCCUPANCY_MASKS[square];
+    }
+
+    static long RookOccupancyMask(int square)
+    {
+        return ROOK_OCCUPANCY_MASKS[square];
+    }
+
     private static long[] BuildLeaperAttacks(int[][] steps)
     {
         long[] attacks = new long[64];
@@ -63,6 +75,27 @@ final class BitboardAttacks
             }
         }
         return attacks;
+    }
+
+    private static long[] BuildOccupancyMasks(int[][] steps)
+    {
+        long[] masks = new long[64];
+        for (int square = 0; square < 64; square++)
+        {
+            for (int[] step : steps)
+            {
+                int file = square % 8 + step[0];
+                int rank = square / 8 + step[1];
+
+                while (OnBoard(file, rank) && OnBoard(file + step[0], rank + step[1]))
+                {
+                    masks[square] |= 1L << (rank * 8 + file);
+                    file += step[0];
+                    rank += step[1];
+                }
+            }
+        }
+        return masks;
     }
 
     private static long SlidingAttacks(int square, long occupancy, int[][] steps)

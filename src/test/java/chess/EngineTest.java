@@ -44,6 +44,31 @@ class EngineTest
     }
 
     @Test
+    void uciMoveHistorySurvivesSnapshotsAndRejectedPositionUpdates()
+    {
+        Engine engine = new Engine();
+        engine.SetPosition(Position.STARTING_FEN, List.of("g1f3", "g8f6", "f3g1", "f6g8"));
+        Position snapshot = engine.GetPositionSnapshot();
+        long[] history = snapshot.GetPositionHistory();
+        assertEquals(5, history.length);
+        assertEquals(new Position().GetPositionKey(), history[0]);
+        assertEquals(history[0], history[4]);
+        String fen = snapshot.ToFen();
+        snapshot.MakeMove(Move.Encode(12, 28, Move.NORMAL), new Position.UndoState());
+        assertEquals(fen, engine.GetPositionFen());
+        assertArrayEquals(history, engine.GetPositionSnapshot().GetPositionHistory());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> engine.SetPosition(Position.STARTING_FEN, List.of("e2e4", "e7e4")));
+        assertArrayEquals(history, engine.GetPositionSnapshot().GetPositionHistory());
+        engine.SetPosition(fen, List.of());
+        assertArrayEquals(new long[]{history[4]}, engine.GetPositionSnapshot().GetPositionHistory());
+        engine.SetPosition(Position.STARTING_FEN, List.of("e2e4"));
+        engine.NewGame();
+        assertArrayEquals(new long[]{history[0]}, engine.GetPositionSnapshot().GetPositionHistory());
+    }
+
+    @Test
     void searchCompletesWithoutPlayingItsMove() throws InterruptedException
     {
         Engine engine = new Engine();

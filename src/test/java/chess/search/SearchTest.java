@@ -99,6 +99,24 @@ class SearchTest
     }
 
     @Test
+    void searchRestoresTheHistoryOfItsCopiedPosition()
+    {
+        Position game = new Position();
+        game.MakeMove(Move.Encode(6, 21, Move.NORMAL), new Position.UndoState());
+        game.MakeMove(Move.Encode(62, 45, Move.NORMAL), new Position.UndoState());
+        Position searchPosition = new Position(game);
+        long[] history = game.GetPositionHistory();
+        String fen = game.ToFen();
+
+        new Search().FindBestMove(searchPosition, 3);
+
+        assertArrayEquals(history, searchPosition.GetPositionHistory());
+        assertArrayEquals(history, game.GetPositionHistory());
+        assertEquals(fen, searchPosition.ToFen());
+        assertEquals(game.GetPositionKey(), searchPosition.GetPositionKey());
+    }
+
+    @Test
     void stopBeforeStartupStillReturnsALegalMove()
     {
         Position position = new Position();

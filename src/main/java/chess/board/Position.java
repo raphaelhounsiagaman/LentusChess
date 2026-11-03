@@ -1,5 +1,7 @@
 package chess.board;
 
+import java.util.Arrays;
+
 public class Position
 {
     public static final String STARTING_FEN =
@@ -22,10 +24,28 @@ public class Position
     private int m_HalfmoveClock;
     private int m_FullmoveNumber;
     private long m_PositionKey;
+    private long[] m_PositionHistory;
+    private int m_HistorySize;
 
     public Position()
     {
         SetStartingPosition();
+    }
+
+    /** Copies the board, counters, and known history without sharing mutable state. */
+    public Position(Position other)
+    {
+        m_BitBoards = other.m_BitBoards.clone();
+        m_WhiteOccupancy = other.m_WhiteOccupancy;
+        m_BlackOccupancy = other.m_BlackOccupancy;
+        m_SideToMove = other.m_SideToMove;
+        m_CastlingRights = other.m_CastlingRights;
+        m_EnPassantSquare = other.m_EnPassantSquare;
+        m_HalfmoveClock = other.m_HalfmoveClock;
+        m_FullmoveNumber = other.m_FullmoveNumber;
+        m_PositionKey = other.m_PositionKey;
+        m_PositionHistory = other.m_PositionHistory.clone();
+        m_HistorySize = other.m_HistorySize;
     }
 
     public void SetStartingPosition()
@@ -86,6 +106,9 @@ public class Position
         m_FullmoveNumber = fullmoveNumber;
         m_SideToMove ^= 1;
         m_PositionKey ^= Zobrist.StateKey(this);
+        if (m_HistorySize == m_PositionHistory.length)
+            m_PositionHistory = Arrays.copyOf(m_PositionHistory, m_HistorySize * 2);
+        m_PositionHistory[m_HistorySize++] = m_PositionKey;
     }
 
     public void UnmakeMove(UndoState undo)
@@ -104,6 +127,7 @@ public class Position
         m_FullmoveNumber = undo.fullmoveNumber;
         m_SideToMove ^= 1;
         m_PositionKey = undo.positionKey;
+        m_HistorySize--;
     }
 
     private void ToggleCastlingRook(int king, int from, int to)
@@ -269,6 +293,10 @@ public class Position
         m_HalfmoveClock = halfmoveClock;
         m_FullmoveNumber = fullmoveNumber;
         m_PositionKey = Zobrist.ComputeKey(this);
+        // A FEN describes only this position, even when its halfmove clock is nonzero.
+        m_PositionHistory = new long[128];
+        m_PositionHistory[0] = m_PositionKey;
+        m_HistorySize = 1;
     }
 
     public int GetPiece(int square)
@@ -341,6 +369,12 @@ public class Position
     public long GetPositionKey()
     {
         return m_PositionKey;
+    }
+
+    /** Returns a copy of known position keys, from the last loaded FEN through the current position. */
+    public long[] GetPositionHistory()
+    {
+        return Arrays.copyOf(m_PositionHistory, m_HistorySize);
     }
 
     private long[] ParsePlacement(String placement)

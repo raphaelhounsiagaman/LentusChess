@@ -82,6 +82,32 @@ This search supports fixed depths from 1 to 64 and UCI clock/movetime limits.
 Pondering, quiescence, repetition and fifty-move draw detection, positional
 evaluation, and transposition tables remain future work.
 
+## Perft position suite
+
+The bundled `perft-v1` suite combines the seven positions already used by the
+perft tests with 43 selected castling, knight, bishop, rook, queen, pawn, and
+promotion positions. Kiwipete and the rook-and-pawn endgame also exercise en
+passant during traversal. Reference counts come from the
+[Chess Programming Wiki](https://chessprogramming.org/Perft_Results) and
+[Ethereal's standard perft suite](https://github.com/AndyGrant/Ethereal/blob/ed4fe7aac5b5d31dd9a75dc7ead3a5f6f89cce30/src/perft/standard.epd).
+The resource records its sources and the selected source line numbers. Preserve
+its positions, order, and counts within this version; use a new suite version
+when changing the workload.
+
+`PerftSuite.Load()` reads the packaged resource into an immutable list with
+stable IDs, six-field FENs, and reference leaf counts for depths 0 through 5.
+The loader rejects malformed entries, duplicate IDs or FENs, missing kings, and
+invalid counts. The suite tests compare every position against `Perft` through
+depth 4. This prepares the position data for the future benchmark command.
+
+| Depth | Reference nodes across all 50 positions |
+| --- | ---: |
+| 1 | 832 |
+| 2 | 16,095 |
+| 3 | 472,525 |
+| 4 | 15,072,328 |
+| 5 | 574,453,633 |
+
 ## Tests
 
 ```powershell

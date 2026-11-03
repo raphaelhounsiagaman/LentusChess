@@ -35,9 +35,14 @@ public class MoveGenerator
 
     public boolean IsSquareAttacked(Position position, int square, int attackingColor)
     {
+        return IsSquareAttacked(position, square, attackingColor, position.GetOccupancy(),
+                position.GetBitBoard(attackingColor * 6 + Piece.WHITE_PAWN));
+    }
+
+    private static boolean IsSquareAttacked(Position position, int square, int attackingColor,
+                                            long occupancy, long pawns)
+    {
         int offset = attackingColor * 6;
-        long occupancy = position.GetOccupancy();
-        long pawns = position.GetBitBoard(offset + Piece.WHITE_PAWN);
         long queens = position.GetBitBoard(offset + Piece.WHITE_QUEEN);
 
         return (BitboardAttacks.PawnAttacks(pawns, attackingColor) & (1L << square)) != 0
@@ -47,6 +52,37 @@ public class MoveGenerator
                     & (position.GetBitBoard(offset + Piece.WHITE_BISHOP) | queens)) != 0
                 || (BitboardAttacks.RookAttacks(square, occupancy)
                     & (position.GetBitBoard(offset + Piece.WHITE_ROOK) | queens)) != 0;
+    }
+
+    static boolean HasLegalEnPassant(Position position)
+    {
+        int target = position.GetEnPassantSquare();
+        int color = position.GetSideToMove();
+        if (target < 0 || target >= 64 || target / 8 != (color == Piece.WHITE ? 5 : 2)
+                || position.GetPiece(target) != Piece.NONE)
+            return false;
+
+        int captured = target + (color == Piece.WHITE ? -8 : 8);
+        int enemy = color ^ 1;
+        if (position.GetPiece(captured) != enemy * 6 + Piece.WHITE_PAWN)
+            return false;
+        long king = position.GetBitBoard(color * 6 + Piece.WHITE_KING);
+        if (king == 0)
+            return false;
+
+        long candidates = BitboardAttacks.PawnAttacks(1L << target, enemy)
+                & position.GetBitBoard(color * 6 + Piece.WHITE_PAWN);
+        long enemyPawns = position.GetBitBoard(enemy * 6 + Piece.WHITE_PAWN) & ~(1L << captured);
+        while (candidates != 0)
+        {
+            long from = Long.lowestOneBit(candidates);
+            candidates &= candidates - 1;
+            // Test king safety after removing both pawns, without recursively making a move.
+            long occupancy = (position.GetOccupancy() & ~from & ~(1L << captured)) | (1L << target);
+            if (!IsSquareAttacked(position, Long.numberOfTrailingZeros(king), enemy, occupancy, enemyPawns))
+                return true;
+        }
+        return false;
     }
 
     private void GeneratePawnMoves(Position position, List<Integer> moves)

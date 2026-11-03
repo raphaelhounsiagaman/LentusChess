@@ -21,6 +21,7 @@ public class Position
     private int m_EnPassantSquare;
     private int m_HalfmoveClock;
     private int m_FullmoveNumber;
+    private long m_PositionKey;
 
     public Position()
     {
@@ -36,6 +37,7 @@ public class Position
     {
         private int move, piece, placedPiece, captured, capturedSquare;
         private int castlingRights, enPassantSquare, halfmoveClock, fullmoveNumber;
+        private long positionKey;
     }
 
     public void MakeMove(int move, UndoState undo)
@@ -67,6 +69,9 @@ public class Position
         undo.enPassantSquare = m_EnPassantSquare;
         undo.halfmoveClock = m_HalfmoveClock;
         undo.fullmoveNumber = m_FullmoveNumber;
+        undo.positionKey = m_PositionKey;
+
+        m_PositionKey ^= Zobrist.StateKey(this);
 
         if (captured != Piece.NONE)
             TogglePiece(captured, 1L << capturedSquare);
@@ -80,6 +85,7 @@ public class Position
         m_HalfmoveClock = halfmoveClock;
         m_FullmoveNumber = fullmoveNumber;
         m_SideToMove ^= 1;
+        m_PositionKey ^= Zobrist.StateKey(this);
     }
 
     public void UnmakeMove(UndoState undo)
@@ -97,6 +103,7 @@ public class Position
         m_HalfmoveClock = undo.halfmoveClock;
         m_FullmoveNumber = undo.fullmoveNumber;
         m_SideToMove ^= 1;
+        m_PositionKey = undo.positionKey;
     }
 
     private void ToggleCastlingRook(int king, int from, int to)
@@ -109,6 +116,7 @@ public class Position
 
     private void TogglePiece(int piece, long squares)
     {
+        m_PositionKey ^= Zobrist.PieceKey(piece, squares);
         m_BitBoards[piece] ^= squares;
         if (piece < Piece.BLACK_PAWN)
             m_WhiteOccupancy ^= squares;
@@ -260,7 +268,7 @@ public class Position
         m_EnPassantSquare = enPassantSquare;
         m_HalfmoveClock = halfmoveClock;
         m_FullmoveNumber = fullmoveNumber;
-
+        m_PositionKey = Zobrist.ComputeKey(this);
     }
 
     public int GetPiece(int square)
@@ -324,6 +332,15 @@ public class Position
     public int GetFullmoveNumber()
     {
         return m_FullmoveNumber;
+    }
+
+    /**
+     * Repetition identity; excludes move counters and unusable en-passant targets.
+     * Draw adjudication also needs the halfmove clock and position history.
+     */
+    public long GetPositionKey()
+    {
+        return m_PositionKey;
     }
 
     private long[] ParsePlacement(String placement)

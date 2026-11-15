@@ -27,6 +27,11 @@ public class Engine
         return m_Position.ToFen();
     }
 
+    public Position GetPositionSnapshot()
+    {
+        return new Position(m_Position);
+    }
+
     public void SetPosition(String fen, List<String> moves)
     {
         Position next = new Position();
@@ -69,8 +74,7 @@ public class Engine
         if (depth < 1 || depth > Search.MAX_DEPTH)
             throw new IllegalArgumentException("Search depth must be between 1 and " + Search.MAX_DEPTH);
         StopSearch();
-        Position searchPosition = new Position();
-        searchPosition.SetPosition(m_Position.ToFen());
+        Position searchPosition = GetPositionSnapshot();
         Search search = new Search();
         m_Search = search;
         m_SearchThread = new Thread(() -> onComplete.accept(search.FindBestMove(searchPosition, depth, timeMillis)), "lentus-search");

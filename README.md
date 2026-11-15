@@ -79,8 +79,22 @@ down the worker. Incoming moves must be legal, including promotion suffixes
 such as `b7b8q`; a rejected move list leaves the previous position intact.
 
 This search supports fixed depths from 1 to 64 and UCI clock/movetime limits.
-Pondering, quiescence, repetition and fifty-move draw detection, positional
-evaluation, and transposition tables remain future work.
+It scores reached threefold repetitions, the fifty-move threshold (100 halfmoves),
+and basic insufficient-material positions as draws, checking mate and stalemate
+first. Supported material draws are bare kings, a lone bishop or knight against
+a bare king, and bishop-only positions where every bishop occupies the same
+square color. A drawn root still returns a legal move when one exists.
+
+Position history includes the supplied starting position or FEN and its incoming
+moves; a FEN alone cannot recover earlier repetitions. Search receives its own
+copy of this history. Draw adjudication stays separate from static evaluation.
+`Search.Result.historyDependent()` flags results that used repetition or the
+fifty-move rule in any searched branch, including rejected moves. Such results
+must not be cached by position key alone; a false flag is not a guarantee that
+the score can be reused under a different history or halfmove clock.
+
+Pondering, quiescence, positional evaluation, and transposition tables remain
+future work.
 
 ## Perft position suite
 

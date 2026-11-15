@@ -1,5 +1,7 @@
 package chess.board;
 
+import java.util.Arrays;
+
 public class Position
 {
     public static final String STARTING_FEN =
@@ -21,10 +23,29 @@ public class Position
     private int m_EnPassantSquare;
     private int m_HalfmoveClock;
     private int m_FullmoveNumber;
+    private long m_PositionKey;
+    private long[] m_PositionHistory;
+    private int m_HistorySize;
 
     public Position()
     {
         SetStartingPosition();
+    }
+
+    /** Copies the board, counters, and known history without sharing mutable state. */
+    public Position(Position other)
+    {
+        m_BitBoards = other.m_BitBoards.clone();
+        m_WhiteOccupancy = other.m_WhiteOccupancy;
+        m_BlackOccupancy = other.m_BlackOccupancy;
+        m_SideToMove = other.m_SideToMove;
+        m_CastlingRights = other.m_CastlingRights;
+        m_EnPassantSquare = other.m_EnPassantSquare;
+        m_HalfmoveClock = other.m_HalfmoveClock;
+        m_FullmoveNumber = other.m_FullmoveNumber;
+        m_PositionKey = other.m_PositionKey;
+        m_PositionHistory = other.m_PositionHistory.clone();
+        m_HistorySize = other.m_HistorySize;
     }
 
     public void SetStartingPosition()
@@ -36,6 +57,7 @@ public class Position
     {
         private int move, piece, placedPiece, captured, capturedSquare;
         private int castlingRights, enPassantSquare, halfmoveClock, fullmoveNumber;
+        private long positionKey;
     }
 
     public void MakeMove(int move, UndoState undo)
@@ -67,6 +89,9 @@ public class Position
         undo.enPassantSquare = m_EnPassantSquare;
         undo.halfmoveClock = m_HalfmoveClock;
         undo.fullmoveNumber = m_FullmoveNumber;
+        undo.positionKey = m_PositionKey;
+
+        m_PositionKey ^= Zobrist.StateKey(this);
 
         if (captured != Piece.NONE)
             TogglePiece(captured, 1L << capturedSquare);
@@ -80,6 +105,10 @@ public class Position
         m_HalfmoveClock = halfmoveClock;
         m_FullmoveNumber = fullmoveNumber;
         m_SideToMove ^= 1;
+        m_PositionKey ^= Zobrist.StateKey(this);
+        if (m_HistorySize == m_PositionHistory.length)
+            m_PositionHistory = Arrays.copyOf(m_PositionHistory, m_HistorySize * 2);
+        m_PositionHistory[m_HistorySize++] = m_PositionKey;
     }
 
     public void UnmakeMove(UndoState undo)
@@ -97,6 +126,8 @@ public class Position
         m_HalfmoveClock = undo.halfmoveClock;
         m_FullmoveNumber = undo.fullmoveNumber;
         m_SideToMove ^= 1;
+        m_PositionKey = undo.positionKey;
+        m_HistorySize--;
     }
 
     private void ToggleCastlingRook(int king, int from, int to)
@@ -109,6 +140,7 @@ public class Position
 
     private void TogglePiece(int piece, long squares)
     {
+        m_PositionKey ^= Zobrist.PieceKey(piece, squares);
         m_BitBoards[piece] ^= squares;
         if (piece < Piece.BLACK_PAWN)
             m_WhiteOccupancy ^= squares;
@@ -260,7 +292,11 @@ public class Position
         m_EnPassantSquare = enPassantSquare;
         m_HalfmoveClock = halfmoveClock;
         m_FullmoveNumber = fullmoveNumber;
-
+        m_PositionKey = Zobrist.ComputeKey(this);
+        // A FEN describes only this position, even when its halfmove clock is nonzero.
+        m_PositionHistory = new long[128];
+        m_PositionHistory[0] = m_PositionKey;
+        m_HistorySize = 1;
     }
 
     public int GetPiece(int square)
@@ -324,6 +360,67 @@ public class Position
     public int GetFullmoveNumber()
     {
         return m_FullmoveNumber;
+    }
+
+    /**
+     * Repetition identity; excludes move counters and unusable en-passant targets.
+     * Draw adjudication also needs the halfmove clock and position history.
+     */
+    public long GetPositionKey()
+    {
+        return m_PositionKey;
+    }
+
+    /** Returns a copy of known position keys, from the last loaded FEN through the current position. */
+    public long[] GetPositionHistory()
+    {
+        return Arrays.copyOf(m_PositionHistory, m_HistorySize);
+    }
+
+    public DrawReason GetDrawReason()
+    {
+        // Prefer a board-only reason when it suffices, regardless of the history.
+        if (HasInsufficientMaterial())
+            return DrawReason.INSUFFICIENT_MATERIAL;
+        if (m_HalfmoveClock >= 100)
+            return DrawReason.FIFTY_MOVE_RULE;
+        if (IsThreefoldRepetition())
+            return DrawReason.THREEFOLD_REPETITION;
+        return DrawReason.NONE;
+    }
+
+    private boolean IsThreefoldRepetition()
+    {
+        int occurrences = 1; // Include the current position.
+        int current = m_HistorySize - 1;
+        int first = Math.max(0, current - m_HalfmoveClock);
+        // Only the same side to move can repeat; pawn moves and captures end the scan.
+        for (int index = current - 2; index >= first; index -= 2)
+        {
+            if (m_PositionHistory[index] == m_PositionKey && ++occurrences == 3)
+                return true;
+        }
+        return false;
+    }
+
+    private boolean HasInsufficientMaterial()
+    {
+        long pawnsRooksQueens = m_BitBoards[Piece.WHITE_PAWN] | m_BitBoards[Piece.BLACK_PAWN]
+                | m_BitBoards[Piece.WHITE_ROOK] | m_BitBoards[Piece.BLACK_ROOK]
+                | m_BitBoards[Piece.WHITE_QUEEN] | m_BitBoards[Piece.BLACK_QUEEN];
+        if (pawnsRooksQueens != 0)
+            return false;
+
+        long knights = m_BitBoards[Piece.WHITE_KNIGHT] | m_BitBoards[Piece.BLACK_KNIGHT];
+        long bishops = m_BitBoards[Piece.WHITE_BISHOP] | m_BitBoards[Piece.BLACK_BISHOP];
+        if (Long.bitCount(knights | bishops) <= 1)
+            return true;
+        if (knights != 0)
+            return false;
+
+        // With only kings and bishops, all bishops must occupy the same square color.
+        long darkSquares = 0xAA55AA55AA55AA55L;
+        return (bishops & darkSquares) == 0 || (bishops & ~darkSquares) == 0;
     }
 
     private long[] ParsePlacement(String placement)

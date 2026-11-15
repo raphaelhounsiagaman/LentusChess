@@ -1,5 +1,6 @@
 package chess.search;
 
+import chess.board.DrawReason;
 import chess.board.Move;
 import chess.board.MoveGenerator;
 import chess.board.Position;
@@ -21,7 +22,12 @@ public class Search
     private long m_Started;
     private long m_BudgetNanos;
 
-    public record Result(int bestMove, int score, int depth, long nodes)
+    /** historyDependent marks scores that used a repetition or fifty-move draw during search. */
+    public record Result(int bestMove, int score, int depth, long nodes, boolean historyDependent)
+    {
+    }
+
+    private record Score(int value, boolean historyDependent)
     {
     }
 
@@ -44,10 +50,14 @@ public class Search
 
         List<Integer> moves = m_MoveGenerator.GenerateLegalMoves(position);
         if (moves.isEmpty())
-            return new Result(Move.NONE, TerminalScore(position, 0), 0, 1);
+            return new Result(Move.NONE, TerminalScore(position, 0), 0, 1, false);
+
+        DrawReason draw = position.GetDrawReason();
+        if (draw != DrawReason.NONE)
+            return new Result(moves.getFirst(), 0, 0, 1, draw.IsHistoryDependent());
 
         // Keep a legal fallback even if stop arrives before the first iteration completes.
-        Result best = new Result(moves.getFirst(), m_Evaluator.Evaluate(position), 0, 0);
+        Result best = new Result(moves.getFirst(), m_Evaluator.Evaluate(position), 0, 0, false);
         for (int depth = 1; depth <= maxDepth && !ShouldStop(); depth++)
         {
             Result iteration = SearchRoot(position, moves, depth);
@@ -56,7 +66,7 @@ public class Search
             best = iteration;
             Collections.swap(moves, 0, moves.indexOf(best.bestMove()));
         }
-        return new Result(best.bestMove(), best.score(), best.depth(), m_Nodes);
+        return new Result(best.bestMove(), best.score(), best.depth(), m_Nodes, best.historyDependent());
     }
 
     public void Stop()
@@ -76,6 +86,7 @@ public class Search
         m_Nodes++;
         int bestMove = moves.getFirst();
         int alpha = -INFINITY;
+        boolean historyDependent = false;
         Position.UndoState undo = new Position.UndoState();
         for (int move : moves)
         {
@@ -83,8 +94,10 @@ public class Search
                 break;
 
             position.MakeMove(move, undo);
-            int score = -Negamax(position, depth - 1, -INFINITY, -alpha, 1);;
+            Score child = Negamax(position, depth - 1, -INFINITY, -alpha, 1);
             position.UnmakeMove(undo);
+            int score = -child.value();
+            historyDependent |= child.historyDependent();
 
             if (score > alpha)
             {
@@ -92,31 +105,39 @@ public class Search
                 bestMove = move;
             }
         }
-        return new Result(bestMove, alpha, depth, m_Nodes);
+        return new Result(bestMove, alpha, depth, m_Nodes, historyDependent);
     }
 
-    private int Negamax(Position position, int depth, int alpha, int beta, int ply)
+    private Score Negamax(Position position, int depth, int alpha, int beta, int ply)
     {
         if (ShouldStop())
-            return 0;
+            return new Score(0, false);
         m_Nodes++;
 
         List<Integer> moves = m_MoveGenerator.GenerateLegalMoves(position);
         if (moves.isEmpty())
-            return TerminalScore(position, ply);
+            return new Score(TerminalScore(position, ply), false);
+        // Draw adjudication is separate from static evaluation and any future evaluation cache.
+        DrawReason draw = position.GetDrawReason();
+        if (draw != DrawReason.NONE)
+            return new Score(0, draw.IsHistoryDependent());
         if (depth == 0)
-            return m_Evaluator.Evaluate(position);
+            return new Score(m_Evaluator.Evaluate(position), false);
 
         int best = -INFINITY;
+        boolean historyDependent = false;
         Position.UndoState undo = new Position.UndoState();
         for (int move : moves)
         {
             if (ShouldStop())
-                return 0;
+                return new Score(0, false);
 
             position.MakeMove(move, undo);
-            int score = -Negamax(position, depth - 1, -beta, -alpha, ply + 1);
+            Score child = Negamax(position, depth - 1, -beta, -alpha, ply + 1);
             position.UnmakeMove(undo);
+            int score = -child.value();
+            // Rejected moves and cutoff bounds can also depend on a history-based draw.
+            historyDependent |= child.historyDependent();
 
             best = Math.max(best, score);
             alpha = Math.max(alpha, score);
@@ -124,7 +145,7 @@ public class Search
             if (alpha >= beta)
                 break;
         }
-        return best;
+        return new Score(best, historyDependent);
     }
 
     private int TerminalScore(Position position, int ply)

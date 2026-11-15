@@ -72,6 +72,20 @@ class UCITest
 
     @ParameterizedTest
     @ValueSource(strings = {
+            "4k3/8/8/8/8/8/8/R3K3 w - - 100 51",
+            "4k3/8/8/8/8/8/8/2B1K3 w - - 0 1"
+    })
+    void recognizedDrawsReportZeroAndALegalMove(String fen)
+    {
+        Engine engine = new Engine();
+        String output = RunCommands(engine, "position fen " + fen + "\ngo depth 2\nstop\nquit\n");
+        assertTrue(output.contains("score cp 0"));
+        assertTrue(new MoveGenerator().GenerateLegalMoves(engine.GetPositionSnapshot()).stream()
+                .map(Move::ToUci).anyMatch(move -> output.contains("bestmove " + move)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
             "position", "position fen 8/8/8/8/8/8/8/8 w - - 0 1", "position startpos bogus",
             "position startpos moves e2e4 e7e4", "go depth", "go depth zero", "go depth 0",
             "go depth 65", "go nodes 100", "go wtime -1", "go movestogo 0", "go wtime"

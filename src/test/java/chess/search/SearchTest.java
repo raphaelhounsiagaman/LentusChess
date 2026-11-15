@@ -1,5 +1,6 @@
 package chess.search;
 
+import chess.board.DrawReason;
 import chess.board.Move;
 import chess.board.MoveGenerator;
 import chess.board.Piece;
@@ -95,7 +96,10 @@ class SearchTest
         var negamax = Search.class.getDeclaredMethod("Negamax", Position.class,
                 int.class, int.class, int.class, int.class);
         negamax.setAccessible(true);
-        assertEquals(expected, negamax.invoke(new Search(), position, 0, -32000, 32000, 1));
+        Object score = negamax.invoke(new Search(), position, 0, -32000, 32000, 1);
+        var value = score.getClass().getDeclaredMethod("value");
+        value.setAccessible(true);
+        assertEquals(expected, value.invoke(score));
         AssertPosition(fen, position);
     }
 
@@ -147,6 +151,24 @@ class SearchTest
     }
 
     @Test
+    void searchRestoresTheHistoryOfItsCopiedPosition()
+    {
+        Position game = new Position();
+        game.MakeMove(Move.Encode(6, 21, Move.NORMAL), new Position.UndoState());
+        game.MakeMove(Move.Encode(62, 45, Move.NORMAL), new Position.UndoState());
+        Position searchPosition = new Position(game);
+        long[] history = game.GetPositionHistory();
+        String fen = game.ToFen();
+
+        new Search().FindBestMove(searchPosition, 3);
+
+        assertArrayEquals(history, searchPosition.GetPositionHistory());
+        assertArrayEquals(history, game.GetPositionHistory());
+        assertEquals(fen, searchPosition.ToFen());
+        assertEquals(game.GetPositionKey(), searchPosition.GetPositionKey());
+    }
+
+    @Test
     void stopBeforeStartupStillReturnsALegalMove()
     {
         Position position = new Position();
@@ -173,6 +195,8 @@ class SearchTest
         List<Integer> moves = generator.GenerateLegalMoves(position);
         if (moves.isEmpty())
             return generator.IsInCheck(position, position.GetSideToMove()) ? -Search.MATE_SCORE + ply : 0;
+        if (position.GetDrawReason() != DrawReason.NONE)
+            return 0;
         boolean inCheck = generator.IsInCheck(position, position.GetSideToMove());
         int best = depth == 0 && !inCheck ? new Evaluator().Evaluate(position) : Integer.MIN_VALUE;
         for (int move : moves)
@@ -201,6 +225,8 @@ class SearchTest
     {
         assertEquals(fen, actual.ToFen());
         Position expected = PositionFrom(fen);
+        assertEquals(expected.GetPositionKey(), actual.GetPositionKey());
+        assertArrayEquals(expected.GetPositionHistory(), actual.GetPositionHistory());
         for (int piece = 0; piece < Piece.COUNT; piece++)
             assertEquals(expected.GetBitBoard(piece), actual.GetBitBoard(piece));
         assertEquals(expected.GetOccupancy(Piece.WHITE), actual.GetOccupancy(Piece.WHITE));

@@ -3,6 +3,9 @@
 The current engine uses bitboard legal move generation, material evaluation, and
 iterative deepening with alpha-beta negamax. Scores are in centipawns from the
 side to move's perspective; mate scores favor shorter wins and longer losses.
+Search orders promotions and captures before quiet moves, favoring valuable
+victims and cheaper attackers. Equal priorities retain move-generator order;
+the previous iteration's best move remains first at the root.
 
 ## Requirements
 
@@ -82,14 +85,28 @@ This search supports fixed depths from 1 to 64 and UCI clock/movetime limits.
 At the depth limit, alpha-beta quiescence uses static evaluation as stand pat
 outside check, then searches legal captures (including en passant) and all
 promotions. In check it searches every legal evasion without stand pat.
-Checkmate and stalemate are recognized before evaluation. Quiescence retains
-move-generation order, contributes to the reported node count, and observes
+Checkmate, stalemate, and draws are recognized before evaluation. Quiescence uses
+the existing capture/promotion ordering, contributes to the node count, and observes
 stop/time limits. If a nonterminal line reaches 64 quiescence plies, search
 stops and returns the last completed iteration (or the legal startup fallback);
 it never evaluates an unresolved check as a stand-pat leaf.
 
-Pondering, repetition and fifty-move draw detection, positional
-evaluation, and transposition tables remain future work.
+It scores reached threefold repetitions, the fifty-move threshold (100 halfmoves),
+and basic insufficient-material positions as draws, checking mate and stalemate
+first. Supported material draws are bare kings, a lone bishop or knight against
+a bare king, and bishop-only positions where every bishop occupies the same
+square color. A drawn root still returns a legal move when one exists.
+
+Position history includes the supplied starting position or FEN and its incoming
+moves; a FEN alone cannot recover earlier repetitions. Search receives its own
+copy of this history. Draw adjudication stays separate from static evaluation.
+`Search.Result.historyDependent()` flags results that used repetition or the
+fifty-move rule in any searched branch, including rejected moves. Such results
+must not be cached by position key alone; a false flag is not a guarantee that
+the score can be reused under a different history or halfmove clock.
+
+Pondering, positional evaluation, and transposition tables remain
+future work.
 
 ## Perft position suite
 

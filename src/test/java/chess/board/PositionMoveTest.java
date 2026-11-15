@@ -14,6 +14,7 @@ class PositionMoveTest
             "4k3/4p3/8/8/8/8/8/4K3 b - - 9 1 | 52 | 36 | 4k3/8/8/4p3/8/8/8/4K3 w - e6 0 2",
             "4k3/8/8/3p4/4P3/8/8/4K3 w - - 7 8 | 28 | 35 | 4k3/8/8/3P4/8/8/8/4K3 b - - 0 8",
             "4k3/8/8/3p4/8/8/8/4K1N1 w - d6 0 4 | 6 | 21 | 4k3/8/8/3p4/8/5N2/8/4K3 b - - 1 4",
+            "k7/8/8/3pP3/8/8/8/4K3 w - d6 0 1 | 4 | 5 | k7/8/8/3pP3/8/8/8/5K2 b - - 1 1",
             "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 3 9 | 4 | 5 | r3k2r/8/8/8/8/8/8/R4K1R b kq - 4 9",
             "r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 3 9 | 60 | 61 | r4k1r/8/8/8/8/8/8/R3K2R w KQ - 4 10",
             "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 3 9 | 7 | 15 | r3k2r/8/8/8/8/8/7R/R3K3 b Qkq - 4 9",
@@ -166,6 +167,7 @@ class PositionMoveTest
         assertEquals(fen, actual.ToFen());
         Position expected = new Position();
         expected.SetPosition(fen);
+        assertEquals(expected.GetPositionKey(), actual.GetPositionKey(), "Position key");
         for (int piece = 0; piece < Piece.COUNT; piece++)
             assertEquals(expected.GetBitBoard(piece), actual.GetBitBoard(piece));
         assertEquals(expected.GetOccupancy(Piece.WHITE), actual.GetOccupancy(Piece.WHITE));

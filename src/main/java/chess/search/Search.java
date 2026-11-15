@@ -58,6 +58,7 @@ public class Search
 
         // Keep a legal fallback even if stop arrives before the first iteration completes.
         Result best = new Result(moves.getFirst(), m_Evaluator.Evaluate(position), 0, 0, false);
+        MoveOrdering.Order(position, moves);
         for (int depth = 1; depth <= maxDepth && !ShouldStop(); depth++)
         {
             Result iteration = SearchRoot(position, moves, depth);
@@ -124,6 +125,7 @@ public class Search
         if (depth == 0)
             return new Score(m_Evaluator.Evaluate(position), false);
 
+        MoveOrdering.Order(position, moves);
         int best = -INFINITY;
         boolean historyDependent = false;
         Position.UndoState undo = new Position.UndoState();

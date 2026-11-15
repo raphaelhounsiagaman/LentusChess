@@ -3,6 +3,9 @@
 The current engine uses bitboard legal move generation, material evaluation, and
 iterative deepening with alpha-beta negamax. Scores are in centipawns from the
 side to move's perspective; mate scores favor shorter wins and longer losses.
+Search orders promotions and captures before quiet moves, favoring valuable
+victims and cheaper attackers. Equal priorities retain move-generator order;
+the previous iteration's best move remains first at the root.
 
 ## Requirements
 

@@ -207,6 +207,7 @@ class PerftTest
         assertEquals(fen, actual.ToFen(), "Perft must restore all FEN state");
         Position expected = new Position();
         expected.SetPosition(fen);
+        assertEquals(expected.GetPositionKey(), actual.GetPositionKey(), "Perft must restore the position key");
         for (int piece = 0; piece < Piece.COUNT; piece++)
             assertEquals(expected.GetBitBoard(piece), actual.GetBitBoard(piece), "Bitboard " + piece);
         assertEquals(expected.GetOccupancy(Piece.WHITE), actual.GetOccupancy(Piece.WHITE), "White occupancy");

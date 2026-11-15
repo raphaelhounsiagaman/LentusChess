@@ -1,5 +1,6 @@
 package chess.search;
 
+import chess.board.DrawReason;
 import chess.board.Move;
 import chess.board.MoveGenerator;
 import chess.board.Piece;
@@ -99,6 +100,24 @@ class SearchTest
     }
 
     @Test
+    void searchRestoresTheHistoryOfItsCopiedPosition()
+    {
+        Position game = new Position();
+        game.MakeMove(Move.Encode(6, 21, Move.NORMAL), new Position.UndoState());
+        game.MakeMove(Move.Encode(62, 45, Move.NORMAL), new Position.UndoState());
+        Position searchPosition = new Position(game);
+        long[] history = game.GetPositionHistory();
+        String fen = game.ToFen();
+
+        new Search().FindBestMove(searchPosition, 3);
+
+        assertArrayEquals(history, searchPosition.GetPositionHistory());
+        assertArrayEquals(history, game.GetPositionHistory());
+        assertEquals(fen, searchPosition.ToFen());
+        assertEquals(game.GetPositionKey(), searchPosition.GetPositionKey());
+    }
+
+    @Test
     void stopBeforeStartupStillReturnsALegalMove()
     {
         Position position = new Position();
@@ -125,6 +144,8 @@ class SearchTest
         List<Integer> moves = generator.GenerateLegalMoves(position);
         if (moves.isEmpty())
             return generator.IsInCheck(position, position.GetSideToMove()) ? -Search.MATE_SCORE + ply : 0;
+        if (position.GetDrawReason() != DrawReason.NONE)
+            return 0;
         if (depth == 0)
             return new Evaluator().Evaluate(position);
         int best = Integer.MIN_VALUE;

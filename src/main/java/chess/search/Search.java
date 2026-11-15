@@ -2,6 +2,7 @@ package chess.search;
 
 import chess.board.Move;
 import chess.board.MoveGenerator;
+import chess.board.Piece;
 import chess.board.Position;
 import chess.eval.Evaluator;
 
@@ -13,6 +14,7 @@ public class Search
     public static final int MATE_SCORE = 30_000;
     public static final int MAX_DEPTH = 64;
     private static final int INFINITY = 32_000;
+    private static final int MAX_QUIESCENCE_PLY = 64;
 
     private final MoveGenerator m_MoveGenerator = new MoveGenerator();
     private final Evaluator m_Evaluator = new Evaluator();
@@ -97,6 +99,8 @@ public class Search
 
     private int Negamax(Position position, int depth, int alpha, int beta, int ply)
     {
+        if (depth == 0)
+            return Quiescence(position, alpha, beta, ply, 0);
         if (ShouldStop())
             return 0;
         m_Nodes++;
@@ -104,8 +108,6 @@ public class Search
         List<Integer> moves = m_MoveGenerator.GenerateLegalMoves(position);
         if (moves.isEmpty())
             return TerminalScore(position, ply);
-        if (depth == 0)
-            return m_Evaluator.Evaluate(position);
 
         int best = -INFINITY;
         Position.UndoState undo = new Position.UndoState();
@@ -121,6 +123,58 @@ public class Search
             best = Math.max(best, score);
             alpha = Math.max(alpha, score);
 
+            if (alpha >= beta)
+                break;
+        }
+        return best;
+    }
+
+    private int Quiescence(Position position, int alpha, int beta, int ply, int qply)
+    {
+        if (ShouldStop())
+            return 0;
+        m_Nodes++;
+
+        List<Integer> moves = m_MoveGenerator.GenerateLegalMoves(position);
+        if (moves.isEmpty())
+            return TerminalScore(position, ply);
+
+        // Abort the iteration instead of assigning a score to an unresolved line.
+        // In particular, a checked position must never become a stand-pat leaf.
+        if (qply >= MAX_QUIESCENCE_PLY)
+        {
+            m_Stop = true;
+            return 0;
+        }
+
+        boolean inCheck = m_MoveGenerator.IsInCheck(position, position.GetSideToMove());
+        int best = -INFINITY;
+        if (!inCheck)
+        {
+            best = m_Evaluator.Evaluate(position);
+            if (best >= beta)
+                return best;
+            alpha = Math.max(alpha, best);
+        }
+
+        Position.UndoState undo = new Position.UndoState();
+        for (int move : moves)
+        {
+            if (ShouldStop())
+                return 0;
+            int type = Move.GetType(move);
+            if (!inCheck && type != Move.EN_PASSANT && type < Move.PROMOTE_KNIGHT
+                    && position.GetPiece(Move.GetTo(move)) == Piece.NONE)
+                continue;
+
+            position.MakeMove(move, undo);
+            int score = -Quiescence(position, -beta, -alpha, ply + 1, qply + 1);
+            position.UnmakeMove(undo);
+            if (ShouldStop())
+                return 0;
+
+            best = Math.max(best, score);
+            alpha = Math.max(alpha, score);
             if (alpha >= beta)
                 break;
         }

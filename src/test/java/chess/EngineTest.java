@@ -114,7 +114,7 @@ class EngineTest
             engine.StartSearch(1, results::add);
             Search.Result fresh = results.poll(5, TimeUnit.SECONDS);
             assertNotNull(fresh);
-            assertEquals(-900, fresh.score());
+            assertTrue(fresh.score() < -700, "Without repetition, White remains a queen down");
             assertFalse(fresh.historyDependent());
         }
         finally

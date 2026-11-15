@@ -29,7 +29,8 @@ class SearchTest
         Position position = PositionFrom(fen);
         Search.Result result = new Search().FindBestMove(position, 2);
         assertEquals(expectedMove, Move.ToUci(result.bestMove()));
-        assertEquals(500, result.score());
+        assertTrue(result.score() > 350 && result.score() < 650,
+                "Winning the queen should leave roughly a rook's advantage");
         assertEquals(2, result.depth());
         assertTrue(result.nodes() > 0);
         AssertPosition(fen, position);
@@ -72,26 +73,39 @@ class SearchTest
         Position position = PositionFrom(fen);
         Search.Result result = new Search().FindBestMove(position, depth);
         assertNotEquals("d1d5", Move.ToUci(result.bestMove()));
-        assertEquals(-100, result.score());
+        assertTrue(result.score() > -250 && result.score() < 0,
+                "Declining the poisoned pawn should retain only a small disadvantage");
         AssertPosition(fen, position);
     }
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
             // A rook recaptures the queen that has just taken on d5.
-            "6k1/8/8/3q4/8/8/8/3R2K1 w - - 0 1 | 500",
+            "6k1/8/8/3q4/8/8/8/3R2K1 w - - 0 1 | 0 | d1d5",
             // En passant is a capture despite its empty destination.
-            "4k3/8/8/8/3pP3/8/8/K7 b - e3 0 1 | 100",
+            "4k3/8/8/8/3pP3/8/8/K7 b - e3 0 1 | 0 | d4e3",
             // Quiet promotions must be searched, including underpromotions.
-            "8/1P6/7k/8/8/8/8/K7 w - - 0 1 | 900",
-            // Only quiet queen blocks evade check, followed by Rxa3#; stand pat is +400.
-            "r7/8/8/8/8/7Q/2k5/K7 w - - 0 1 | -29997",
-            "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1 | -29999",
-            "7k/5Q2/5K2/8/8/8/8/8 b - - 0 1 | 0"
+            "8/1P6/7k/8/8/8/8/K7 w - - 0 1 | 0 | b7b8q",
+            // Only quiet queen blocks evade check, followed by Rxa3#.
+            "r7/8/8/8/8/7Q/2k5/K7 w - - 0 1 | -29997 |",
+            "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1 | -29999 |",
+            "7k/5Q2/5K2/8/8/8/8/8 b - - 0 1 | 0 |"
     })
-    void resolvesTacticsAndTerminalsAtTheHorizon(String fen, int expected) throws Exception
+    void resolvesTacticsAndTerminalsAtTheHorizon(String fen, int expected, String resolvingMove) throws Exception
     {
         Position position = PositionFrom(fen);
+        if (resolvingMove != null)
+        {
+            // These moves lead to quiet leaves. Derive their positional scores while
+            // keeping the expected capture/en-passant/promotion independent of search.
+            Position leaf = new Position(position);
+            int move = generator.GenerateLegalMoves(leaf).stream()
+                    .filter(candidate -> Move.ToUci(candidate).equals(resolvingMove))
+                    .findFirst().orElseThrow();
+            leaf.MakeMove(move, new Position.UndoState());
+            expected = -new Evaluator().Evaluate(leaf);
+            assertTrue(expected > new Evaluator().Evaluate(position));
+        }
         // Enter the actual depth-zero path with a full window, independent of root choices.
         var negamax = Search.class.getDeclaredMethod("Negamax", Position.class,
                 int.class, int.class, int.class, int.class);

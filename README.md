@@ -1,8 +1,13 @@
 # LentusChess
 
-The current engine uses bitboard legal move generation, material evaluation, and
+The current engine uses bitboard legal move generation, tapered positional evaluation, and
 iterative deepening with alpha-beta negamax. Scores are in centipawns from the
 side to move's perspective; mate scores favor shorter wins and longer losses.
+Evaluation adds untuned, hand-written piece-square bonuses to material for both
+middlegame and endgame, including king placement. It blends them by remaining
+non-pawn material: knights/bishops count 1, rooks 2, queens 4, with the total
+clamped to the starting phase of 24. Pawns and kings do not affect phase.
+Black's table lookups mirror ranks, preserving files. Draws remain search decisions.
 Search orders promotions and captures before quiet moves, favoring valuable
 victims and cheaper attackers. Equal priorities retain move-generator order;
 the previous iteration's best move remains first at the root.

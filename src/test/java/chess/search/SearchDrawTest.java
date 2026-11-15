@@ -53,14 +53,18 @@ class SearchDrawTest
     @ParameterizedTest
     // At clock 98, depth-one checking moves now extend into evasions at clock 100.
     // Even though those draw lines are rejected, the result remains history-dependent.
-    @CsvSource({"99, 1, 0, true", "98, 1, 500, true", "98, 2, 0, true", "0, 2, 500, false"})
-    void fiftyMoveDrawsAreDetectedAtTheHorizonAndPropagated(int clock, int depth, int score,
+    @CsvSource({"99, 1, true, true", "98, 1, false, true", "98, 2, true, true", "0, 2, false, false"})
+    void fiftyMoveDrawsAreDetectedAtTheHorizonAndPropagated(int clock, int depth, boolean draw,
                                                          boolean historyDependent)
     {
         String fen = "4k3/8/8/8/8/8/8/R3K3 w - - " + clock + " 50";
         Position position = FromFen(fen);
         Search.Result result = new Search().FindBestMove(position, depth);
-        assertEquals(score, result.score());
+        if (draw)
+            assertEquals(0, result.score());
+        else
+            assertTrue(result.score() > 350 && result.score() < 650,
+                    "Without a forced draw, White retains roughly a rook's advantage");
         assertEquals(historyDependent, result.historyDependent());
         assertEquals(fen, position.ToFen());
         assertArrayEquals(new long[]{position.GetPositionKey()}, position.GetPositionHistory());
@@ -80,7 +84,10 @@ class SearchDrawTest
         Position position = FromFen("4k3/8/8/8/8/8/q7/R3K3 w - - 99 50");
         Search.Result result = new Search().FindBestMove(position, 1);
         assertEquals("a1a2", Move.ToUci(result.bestMove()));
-        assertEquals(500, result.score());
+        Position leaf = new Position(position);
+        leaf.MakeMove(result.bestMove(), new Position.UndoState());
+        assertEquals(-new Evaluator().Evaluate(leaf), result.score());
+        assertTrue(result.score() > 0);
         assertTrue(result.historyDependent(), "Other moves reached the fifty-move threshold");
     }
 
@@ -111,12 +118,14 @@ class SearchDrawTest
         assertTrue(repeated.historyDependent());
         assertEquals(fen, position.ToFen());
         assertArrayEquals(history, position.GetPositionHistory());
-        assertEquals(-900, new Evaluator().Evaluate(position));
+        assertTrue(new Evaluator().Evaluate(position) < -700,
+                "Static evaluation must retain the queen deficit despite repetition history");
 
         Position fresh = FromFen(fen);
         assertEquals(position.GetPositionKey(), fresh.GetPositionKey());
         Search.Result ongoing = search.FindBestMove(fresh, 1);
-        assertEquals(-900, ongoing.score());
+        assertTrue(ongoing.score() < -700, "Without repetition, White remains a queen down");
+        assertEquals(new Evaluator().Evaluate(position), new Evaluator().Evaluate(fresh));
         assertFalse(ongoing.historyDependent());
     }
 

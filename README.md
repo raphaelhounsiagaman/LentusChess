@@ -82,6 +82,15 @@ down the worker. Incoming moves must be legal, including promotion suffixes
 such as `b7b8q`; a rejected move list leaves the previous position intact.
 
 This search supports fixed depths from 1 to 64 and UCI clock/movetime limits.
+At the depth limit, alpha-beta quiescence uses static evaluation as stand pat
+outside check, then searches legal captures (including en passant) and all
+promotions. In check it searches every legal evasion without stand pat.
+Checkmate, stalemate, and draws are recognized before evaluation. Quiescence uses
+the existing capture/promotion ordering, contributes to the node count, and observes
+stop/time limits. If a nonterminal line reaches 64 quiescence plies, search
+stops and returns the last completed iteration (or the legal startup fallback);
+it never evaluates an unresolved check as a stand-pat leaf.
+
 It scores reached threefold repetitions, the fifty-move threshold (100 halfmoves),
 and basic insufficient-material positions as draws, checking mate and stalemate
 first. Supported material draws are bare kings, a lone bishop or knight against
@@ -96,7 +105,7 @@ fifty-move rule in any searched branch, including rejected moves. Such results
 must not be cached by position key alone; a false flag is not a guarantee that
 the score can be reused under a different history or halfmove clock.
 
-Pondering, quiescence, positional evaluation, and transposition tables remain
+Pondering, positional evaluation, and transposition tables remain
 future work.
 
 ## Perft position suite

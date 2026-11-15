@@ -3,6 +3,7 @@ package chess.search;
 import chess.board.DrawReason;
 import chess.board.Move;
 import chess.board.MoveGenerator;
+import chess.board.Piece;
 import chess.board.Position;
 import chess.eval.Evaluator;
 
@@ -14,6 +15,7 @@ public class Search
     public static final int MATE_SCORE = 30_000;
     public static final int MAX_DEPTH = 64;
     private static final int INFINITY = 32_000;
+    private static final int MAX_QUIESCENCE_PLY = 64;
 
     private final MoveGenerator m_MoveGenerator = new MoveGenerator();
     private final Evaluator m_Evaluator = new Evaluator();
@@ -111,6 +113,8 @@ public class Search
 
     private Score Negamax(Position position, int depth, int alpha, int beta, int ply)
     {
+        if (depth == 0)
+            return Quiescence(position, alpha, beta, ply, 0);
         if (ShouldStop())
             return new Score(0, false);
         m_Nodes++;
@@ -122,8 +126,6 @@ public class Search
         DrawReason draw = position.GetDrawReason();
         if (draw != DrawReason.NONE)
             return new Score(0, draw.IsHistoryDependent());
-        if (depth == 0)
-            return new Score(m_Evaluator.Evaluate(position), false);
 
         MoveOrdering.Order(position, moves);
         int best = -INFINITY;
@@ -144,6 +146,65 @@ public class Search
             best = Math.max(best, score);
             alpha = Math.max(alpha, score);
 
+            if (alpha >= beta)
+                break;
+        }
+        return new Score(best, historyDependent);
+    }
+
+    private Score Quiescence(Position position, int alpha, int beta, int ply, int qply)
+    {
+        if (ShouldStop())
+            return new Score(0, false);
+        m_Nodes++;
+
+        List<Integer> moves = m_MoveGenerator.GenerateLegalMoves(position);
+        if (moves.isEmpty())
+            return new Score(TerminalScore(position, ply), false);
+        DrawReason draw = position.GetDrawReason();
+        if (draw != DrawReason.NONE)
+            return new Score(0, draw.IsHistoryDependent());
+
+        // Abort the iteration instead of assigning a score to an unresolved line.
+        // In particular, a checked position must never become a stand-pat leaf.
+        if (qply >= MAX_QUIESCENCE_PLY)
+        {
+            m_Stop = true;
+            return new Score(0, false);
+        }
+
+        boolean inCheck = m_MoveGenerator.IsInCheck(position, position.GetSideToMove());
+        int best = -INFINITY;
+        if (!inCheck)
+        {
+            best = m_Evaluator.Evaluate(position);
+            if (best >= beta)
+                return new Score(best, false);
+            alpha = Math.max(alpha, best);
+        }
+
+        MoveOrdering.Order(position, moves);
+        boolean historyDependent = false;
+        Position.UndoState undo = new Position.UndoState();
+        for (int move : moves)
+        {
+            if (ShouldStop())
+                return new Score(0, false);
+            int type = Move.GetType(move);
+            if (!inCheck && type != Move.EN_PASSANT && type < Move.PROMOTE_KNIGHT
+                    && position.GetPiece(Move.GetTo(move)) == Piece.NONE)
+                continue;
+
+            position.MakeMove(move, undo);
+            Score child = Quiescence(position, -beta, -alpha, ply + 1, qply + 1);
+            position.UnmakeMove(undo);
+            if (ShouldStop())
+                return new Score(0, false);
+            int score = -child.value();
+            historyDependent |= child.historyDependent();
+
+            best = Math.max(best, score);
+            alpha = Math.max(alpha, score);
             if (alpha >= beta)
                 break;
         }

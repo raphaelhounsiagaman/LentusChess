@@ -51,7 +51,9 @@ class SearchDrawTest
     }
 
     @ParameterizedTest
-    @CsvSource({"99, 1, 0, true", "98, 1, 500, false", "98, 2, 0, true", "0, 2, 500, false"})
+    // At clock 98, depth-one checking moves now extend into evasions at clock 100.
+    // Even though those draw lines are rejected, the result remains history-dependent.
+    @CsvSource({"99, 1, 0, true", "98, 1, 500, true", "98, 2, 0, true", "0, 2, 500, false"})
     void fiftyMoveDrawsAreDetectedAtTheHorizonAndPropagated(int clock, int depth, int score,
                                                          boolean historyDependent)
     {

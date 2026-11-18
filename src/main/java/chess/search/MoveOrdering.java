@@ -14,9 +14,17 @@ final class MoveOrdering
 
     static void Order(Position position, List<Integer> moves)
     {
+        Order(position, moves, Move.NONE);
+    }
+
+    static void Order(Position position, List<Integer> moves, int preferredMove)
+    {
         int[] scores = new int[moves.size()];
         for (int i = 0; i < moves.size(); i++)
-            scores[i] = Score(position, moves.get(i));
+        {
+            int move = moves.get(i);
+            scores[i] = move == preferredMove ? Integer.MAX_VALUE : Score(position, move);
+        }
 
         // Stable insertion sort preserves generator order for equally ranked moves.
         for (int i = 1; i < moves.size(); i++)

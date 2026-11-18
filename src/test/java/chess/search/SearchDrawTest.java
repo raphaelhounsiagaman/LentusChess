@@ -1,6 +1,7 @@
 package chess.search;
 
 import chess.Engine;
+import chess.board.DrawReason;
 import chess.board.Move;
 import chess.board.MoveGenerator;
 import chess.board.Position;
@@ -92,6 +93,36 @@ class SearchDrawTest
     }
 
     @Test
+    void cachedMoveInAnOngoingNodeDoesNotBypassTheClockInDescendants()
+    {
+        String board = "4k3/8/8/8/8/8/8/R3K3 w - - ";
+        Position fresh = FromFen(board + "0 50");
+        Position nearDraw = FromFen(board + "98 50");
+        Position freshChild = new Position(fresh);
+        Position nearDrawChild = new Position(nearDraw);
+        int rookMove = Move.Encode(0, 8, Move.NORMAL);
+        freshChild.MakeMove(rookMove, new Position.UndoState());
+        nearDrawChild.MakeMove(rookMove, new Position.UndoState());
+        long key = freshChild.GetPositionKey();
+        assertEquals(key, nearDrawChild.GetPositionKey());
+        assertEquals(99, nearDrawChild.GetHalfmoveClock());
+        assertEquals(DrawReason.NONE, nearDrawChild.GetDrawReason());
+
+        TranspositionTable table = new TranspositionTable(16_384);
+        Search search = new Search(table);
+        assertTrue(search.FindBestMove(fresh, 2).score() > 350);
+        int hint = table.ProbeMove(key);
+        assertTrue(new MoveGenerator().GenerateLegalMoves(nearDrawChild).contains(hint));
+        assertNull(table.Probe(key));
+        table.Store(new TranspositionTable.Entry(key, 2, -Search.MATE_SCORE, TranspositionTable.Bound.EXACT, hint));
+
+        Search.Result result = search.FindBestMove(nearDraw, 2);
+        assertEquals(2, result.depth());
+        assertEquals(0, result.score());
+        assertTrue(result.historyDependent());
+    }
+
+    @Test
     void capturingIntoInsufficientMaterialIsADrawAtTheHorizon()
     {
         Position position = FromFen("7k/8/8/8/8/2b5/8/1N2K3 w - - 0 1");
@@ -127,6 +158,36 @@ class SearchDrawTest
         assertTrue(ongoing.score() < -700, "Without repetition, White remains a queen down");
         assertEquals(new Evaluator().Evaluate(position), new Evaluator().Evaluate(fresh));
         assertFalse(ongoing.historyDependent());
+    }
+
+    @Test
+    void warmTableStillAdjudicatesAThirdOccurrenceAtAnInteriorNode()
+    {
+        Engine engine = new Engine();
+        engine.SetPosition("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR b KQkq - 0 1",
+                List.of("g8f6", "g1f3", "f6g8", "f3g1", "g8f6", "g1f3", "f6g8"));
+        Position repeated = engine.GetPositionSnapshot();
+        Position fresh = FromFen(repeated.ToFen());
+        Position repeatedChild = new Position(repeated);
+        Position freshChild = new Position(fresh);
+        int repeatingMove = Move.Encode(21, 6, Move.NORMAL);
+        repeatedChild.MakeMove(repeatingMove, new Position.UndoState());
+        freshChild.MakeMove(repeatingMove, new Position.UndoState());
+        long key = freshChild.GetPositionKey();
+        assertEquals(key, repeatedChild.GetPositionKey());
+        assertEquals(DrawReason.THREEFOLD_REPETITION, repeatedChild.GetDrawReason());
+        assertEquals(DrawReason.NONE, freshChild.GetDrawReason());
+
+        TranspositionTable table = new TranspositionTable(16_384);
+        Search search = new Search(table);
+        assertTrue(search.FindBestMove(fresh, 2).score() < -700);
+        assertTrue(new MoveGenerator().GenerateLegalMoves(repeatedChild).contains(table.ProbeMove(key)));
+
+        Search.Result result = search.FindBestMove(repeated, 2);
+        assertEquals(2, result.depth());
+        assertEquals(repeatingMove, result.bestMove());
+        assertEquals(0, result.score());
+        assertTrue(result.historyDependent());
     }
 
     private static Position FromFen(String fen)

@@ -44,6 +44,20 @@ class TranspositionTableTest
     }
 
     @Test
+    void probesMoveHintsByFullKeyWithoutReturningAScore()
+    {
+        TranspositionTable table = new TranspositionTable(1);
+        long key = 1L << 32;
+        int move = Move.Encode(1, 18, Move.NORMAL);
+
+        table.StoreMove(key, 3, move);
+
+        assertEquals(move, table.ProbeMove(key));
+        assertEquals(Move.NONE, table.ProbeMove(0));
+        assertNull(table.Probe(key));
+    }
+
+    @Test
     void keepsDeeperEntriesForTheSameKeyAndReplacesAtEqualOrGreaterDepth()
     {
         TranspositionTable table = new TranspositionTable(1);

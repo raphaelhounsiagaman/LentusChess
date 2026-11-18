@@ -40,6 +40,35 @@ class MoveOrderingTest
     }
 
     @Test
+    void prioritizesALegalHintAndPreservesTheOrderOfOtherMoves()
+    {
+        Position position = new Position();
+        position.SetPosition("4k3/8/8/8/8/q6p/8/R3K2R w - - 0 1");
+        List<Integer> moves = new MoveGenerator().GenerateLegalMoves(position);
+        List<Integer> expected = new ArrayList<>(moves);
+        MoveOrdering.Order(position, expected);
+
+        int quietMove = Move.Encode(4, 12, Move.NORMAL);
+        assertTrue(expected.remove(Integer.valueOf(quietMove)));
+        expected.addFirst(quietMove);
+
+        MoveOrdering.Order(position, moves, quietMove);
+        assertEquals(expected, moves);
+    }
+
+    @Test
+    void ignoresAnIllegalHint()
+    {
+        Position position = new Position();
+        List<Integer> moves = new MoveGenerator().GenerateLegalMoves(position);
+        List<Integer> expected = new ArrayList<>(moves);
+        MoveOrdering.Order(position, expected);
+
+        MoveOrdering.Order(position, moves, Move.Encode(4, 12, Move.NORMAL));
+        assertEquals(expected, moves);
+    }
+
+    @Test
     void preservesOrderAmongQuietMoves()
     {
         Position position = new Position();

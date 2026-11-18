@@ -16,9 +16,11 @@ public class Search
     public static final int MAX_DEPTH = 64;
     private static final int INFINITY = 32_000;
     private static final int MAX_QUIESCENCE_PLY = 64;
+    private static final int TRANSPOSITION_CAPACITY = 16_384;
 
     private final MoveGenerator m_MoveGenerator = new MoveGenerator();
     private final Evaluator m_Evaluator = new Evaluator();
+    private final TranspositionTable m_TranspositionTable;
     private volatile boolean m_Stop;
     private long m_Nodes;
     private long m_Started;
@@ -31,6 +33,16 @@ public class Search
 
     private record Score(int value, boolean historyDependent)
     {
+    }
+
+    public Search()
+    {
+        this(new TranspositionTable(TRANSPOSITION_CAPACITY));
+    }
+
+    Search(TranspositionTable table)
+    {
+        m_TranspositionTable = table;
     }
 
     public Result FindBestMove(Position position, int maxDepth)
@@ -127,8 +139,10 @@ public class Search
         if (draw != DrawReason.NONE)
             return new Score(0, draw.IsHistoryDependent());
 
-        MoveOrdering.Order(position, moves);
+        long key = position.GetPositionKey();
+        MoveOrdering.Order(position, moves, m_TranspositionTable.ProbeMove(key));
         int best = -INFINITY;
+        int bestMove = Move.NONE;
         boolean historyDependent = false;
         Position.UndoState undo = new Position.UndoState();
         for (int move : moves)
@@ -139,16 +153,23 @@ public class Search
             position.MakeMove(move, undo);
             Score child = Negamax(position, depth - 1, -beta, -alpha, ply + 1);
             position.UnmakeMove(undo);
+            if (ShouldStop())
+                return new Score(0, false);
             int score = -child.value();
             // Rejected moves and cutoff bounds can also depend on a history-based draw.
             historyDependent |= child.historyDependent();
 
-            best = Math.max(best, score);
+            if (score > best)
+            {
+                best = score;
+                bestMove = move;
+            }
             alpha = Math.max(alpha, score);
 
             if (alpha >= beta)
                 break;
         }
+        m_TranspositionTable.StoreMove(key, depth, bestMove);
         return new Score(best, historyDependent);
     }
 

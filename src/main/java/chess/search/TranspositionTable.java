@@ -20,7 +20,7 @@ final class TranspositionTable
      * perspective, with mate distance relative to this position. Best move uses the engine's
      * move encoding, with {@link Move#NONE} when no move is available.
      */
-    record Entry(long key, int depth, int score, Bound bound, int bestMove)
+    record Entry(long key, int depth, int score, Bound bound, int bestMove) implements Slot
     {
         Entry
         {
@@ -30,13 +30,24 @@ final class TranspositionTable
         }
     }
 
-    private final Entry[] m_Entries;
+    private sealed interface Slot permits Entry, MoveHint
+    {
+        long key();
+        int depth();
+        int bestMove();
+    }
+
+    private record MoveHint(long key, int depth, int bestMove) implements Slot
+    {
+    }
+
+    private final Slot[] m_Entries;
 
     TranspositionTable(int capacity)
     {
         if (capacity < 1)
             throw new IllegalArgumentException("Table capacity must be positive");
-        m_Entries = new Entry[capacity];
+        m_Entries = new Slot[capacity];
     }
 
     int GetCapacity()
@@ -44,20 +55,42 @@ final class TranspositionTable
         return m_Entries.length;
     }
 
-    /** Returns the entry for the full key, or null on a miss. */
+    /** Returns a scored entry for the full key, or null if only a move hint or no entry exists. */
     Entry Probe(long key)
     {
-        Entry entry = m_Entries[Index(key)];
-        return entry != null && entry.key() == key ? entry : null;
+        return ProbeSlot(key) instanceof Entry entry ? entry : null;
+    }
+
+    /** Returns the stored move for the full key, or {@link Move#NONE} on a miss. */
+    int ProbeMove(long key)
+    {
+        Slot slot = ProbeSlot(key);
+        return slot != null ? slot.bestMove() : Move.NONE;
+    }
+
+    void Store(Entry entry)
+    {
+        StoreSlot(entry);
+    }
+
+    void StoreMove(long key, int depth, int bestMove)
+    {
+        StoreSlot(new MoveHint(key, depth, bestMove));
+    }
+
+    private Slot ProbeSlot(long key)
+    {
+        Slot slot = m_Entries[Index(key)];
+        return slot != null && slot.key() == key ? slot : null;
     }
 
     /** Fills empty slots, replaces collisions, and keeps deeper entries for the same key. */
-    void Store(Entry entry)
+    private void StoreSlot(Slot slot)
     {
-        int index = Index(entry.key());
-        Entry previous = m_Entries[index];
-        if (previous == null || previous.key() != entry.key() || previous.depth() <= entry.depth())
-            m_Entries[index] = entry;
+        int index = Index(slot.key());
+        Slot previous = m_Entries[index];
+        if (previous == null || previous.key() != slot.key() || previous.depth() <= slot.depth())
+            m_Entries[index] = slot;
     }
 
     void Clear()

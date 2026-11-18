@@ -110,8 +110,26 @@ fifty-move rule in any searched branch, including rejected moves. Such results
 must not be cached by position key alone; a false flag is not a guarantee that
 the score can be reused under a different history or halfmove clock.
 
-Pondering, positional evaluation, and transposition tables remain
-future work.
+A standalone fixed-capacity transposition table stores depth, score, bound
+(exact, lower, or upper), and best move. Each slot holds one full 64-bit key.
+A different key replaces the slot, and a write for the same key replaces the
+entry at equal or greater depth. The table supports explicit clearing and is
+currently independent of search.
+
+The first search integration can use a matching, legal table move for ordering
+after terminal and draw checks, with scores and bounds still computed by
+search. Before enabling score reuse, normalize mate scores to the stored node
+by adding the current root ply to winning mate scores and subtracting it from
+losing mate scores. Reverse the adjustment at the probe ply. Mate detection
+must account for quiescence plies as well as regular search depth.
+
+Score and bound reuse also requires compatible halfmove clocks and repetition
+histories, or a condition that proves the result is independent of both. A
+board-key match, a clear history-dependent flag at storage, and a draw check
+at the probing node are insufficient: descendants can reach a repetition or
+the fifty-move threshold in one context and play on in another.
+
+Pondering remains future work.
 
 ## Perft position suite
 

@@ -16,6 +16,8 @@ public class Search
     public static final int MAX_DEPTH = 64;
     private static final int INFINITY = 32_000;
     private static final int MAX_QUIESCENCE_PLY = 64;
+    // Quiescence checks for checkmate at its final ply before enforcing the cap.
+    private static final int MIN_MATE_SCORE = MATE_SCORE - (MAX_DEPTH + MAX_QUIESCENCE_PLY);
     private static final int TRANSPOSITION_CAPACITY = 16_384;
 
     private final MoveGenerator m_MoveGenerator = new MoveGenerator();
@@ -235,5 +237,26 @@ public class Search
     private int TerminalScore(Position position, int ply)
     {
         return m_MoveGenerator.IsInCheck(position, position.GetSideToMove()) ? -MATE_SCORE + ply : 0;
+    }
+
+    /** Converts a root-relative search score to a position-relative table score. */
+    static int ToTableScore(int score, int ply)
+    {
+        return AdjustMateScore(score, ply);
+    }
+
+    /** Converts a position-relative table score to a score relative to the probing root. */
+    static int FromTableScore(int score, int ply)
+    {
+        return AdjustMateScore(score, -ply);
+    }
+
+    private static int AdjustMateScore(int score, int adjustment)
+    {
+        if (MIN_MATE_SCORE <= score && score <= MATE_SCORE)
+            return score + adjustment;
+        if (-MATE_SCORE <= score && score <= -MIN_MATE_SCORE)
+            return score - adjustment;
+        return score;
     }
 }

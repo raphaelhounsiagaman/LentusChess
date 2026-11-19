@@ -118,17 +118,17 @@ entry at equal or greater depth. The table supports explicit clearing.
 Each UCI search starts with an empty table. After terminal and draw checks,
 interior negamax nodes prioritize a matching table move if it occurs in the
 legal move list. A finished node, including a cutoff, can supply a move hint.
-Scores and bounds are computed by search. Before enabling score reuse,
-normalize mate scores to the stored node by adding the current root ply to
-winning mate scores and subtracting it from
-losing mate scores. Reverse the adjustment at the probe ply. Mate detection
-must account for quiescence plies as well as regular search depth.
+Mate-score conversion adds the storage node's root ply to winning mate scores
+and subtracts it from losing mate scores, making the table score relative to
+the stored position. The inverse uses the probing node's root ply. The mate
+band covers regular search and quiescence plies. Search currently uses the
+table for move ordering only.
 
-Score and bound reuse also requires compatible halfmove clocks and repetition
-histories, or a condition that proves the result is independent of both. A
-board-key match, a clear history-dependent flag at storage, and a draw check
-at the probing node are insufficient: descendants can reach a repetition or
-the fifty-move threshold in one context and play on in another.
+Score and bound reuse requires a probe-time guarantee of compatible halfmove
+clocks and repetition histories, or proof that the result is independent of
+both. A board-key match, a clear history-dependent flag at storage, and a draw
+check at the probing node are insufficient because descendants can reach a
+repetition or the fifty-move threshold in one context and play on in another.
 
 Pondering remains future work.
 

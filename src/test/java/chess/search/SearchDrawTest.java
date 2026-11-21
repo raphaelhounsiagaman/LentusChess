@@ -93,7 +93,7 @@ class SearchDrawTest
     }
 
     @Test
-    void cachedMoveInAnOngoingNodeDoesNotBypassTheClockInDescendants()
+    void cachedScoreInAnOngoingNodeDoesNotBypassTheClockInDescendants()
     {
         String board = "4k3/8/8/8/8/8/8/R3K3 w - - ";
         Position fresh = FromFen(board + "0 50");
@@ -113,13 +113,52 @@ class SearchDrawTest
         assertTrue(search.FindBestMove(fresh, 2).score() > 350);
         int hint = table.ProbeMove(key);
         assertTrue(new MoveGenerator().GenerateLegalMoves(nearDrawChild).contains(hint));
-        assertNull(table.Probe(key));
-        table.Store(new TranspositionTable.Entry(key, 2, -Search.MATE_SCORE, TranspositionTable.Bound.EXACT, hint));
+        table.Store(new TranspositionTable.Entry(key, 1, -Search.MATE_SCORE,
+                TranspositionTable.Bound.EXACT, hint, freshChild.CaptureDrawContext(), false));
+        assertNotNull(table.ProbeExact(freshChild, 1));
+        assertNull(table.ProbeExact(nearDrawChild, 1));
 
         Search.Result result = search.FindBestMove(nearDraw, 2);
         assertEquals(2, result.depth());
         assertEquals(0, result.score());
         assertTrue(result.historyDependent());
+    }
+
+    @Test
+    void rejectsAnExactScoreWhenOnlyTheProbingHistoryAllowsARepetitionInAChild()
+    {
+        String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR b KQkq - 0 1";
+        Engine engine = new Engine();
+        engine.SetPosition(fen, List.of("g8f6", "g1f3", "f6g8", "f3g1", "g8f6", "g1f3"));
+        Position repeated = engine.GetPositionSnapshot();
+        engine.SetPosition(fen, List.of("g8f6", "g1f3", "b8c6", "b1c3", "c6b8", "c3b1"));
+        int candidate = Move.Encode(45, 62, Move.NORMAL);
+        int repeatingMove = Move.Encode(21, 6, Move.NORMAL);
+        Position repeatedChild = new Position(repeated);
+        Position alternateChild = engine.GetPositionSnapshot();
+        repeatedChild.MakeMove(candidate, new Position.UndoState());
+        alternateChild.MakeMove(candidate, new Position.UndoState());
+        long key = repeatedChild.GetPositionKey();
+        assertEquals(key, alternateChild.GetPositionKey());
+        assertEquals(repeatedChild.GetHalfmoveClock(), alternateChild.GetHalfmoveClock());
+        assertEquals(DrawReason.NONE, repeatedChild.GetDrawReason());
+        assertEquals(DrawReason.NONE, alternateChild.GetDrawReason());
+
+        TranspositionTable table = new TranspositionTable(16_384);
+        table.Store(new TranspositionTable.Entry(key, 1, -Search.MATE_SCORE,
+                TranspositionTable.Bound.EXACT, repeatingMove, alternateChild.CaptureDrawContext(), false));
+        assertNotNull(table.ProbeExact(alternateChild, 1));
+        assertNull(table.ProbeExact(repeatedChild, 1));
+
+        repeatedChild.MakeMove(repeatingMove, new Position.UndoState());
+        alternateChild.MakeMove(repeatingMove, new Position.UndoState());
+        assertEquals(DrawReason.THREEFOLD_REPETITION, repeatedChild.GetDrawReason());
+        assertEquals(DrawReason.NONE, alternateChild.GetDrawReason());
+
+        Search.Result cold = new Search().FindBestMove(repeated, 2);
+        Search.Result warm = new Search(table).FindBestMove(repeated, 2);
+        assertEquals(cold.score(), warm.score());
+        assertTrue(warm.historyDependent());
     }
 
     @Test

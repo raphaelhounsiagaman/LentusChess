@@ -1,6 +1,7 @@
 package chess.search;
 
 import chess.board.Move;
+import chess.board.Position;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -18,15 +19,18 @@ final class TranspositionTable
     /**
      * Depth is the remaining search depth in plies. The score is from the side to move's
      * perspective, with mate distance relative to this position. Best move uses the engine's
-     * move encoding, with {@link Move#NONE} when no move is available.
+     * move encoding, with {@link Move#NONE} when no move is available. The draw context
+     * belongs to the stored node, and historyDependent describes draws used by its search.
      */
-    record Entry(long key, int depth, int score, Bound bound, int bestMove) implements Slot
+    record Entry(long key, int depth, int score, Bound bound, int bestMove,
+                 Position.DrawContext drawContext, boolean historyDependent) implements Slot
     {
         Entry
         {
             if (depth < 0)
                 throw new IllegalArgumentException("Search depth must be nonnegative");
             Objects.requireNonNull(bound, "bound");
+            Objects.requireNonNull(drawContext, "drawContext");
         }
     }
 
@@ -55,10 +59,20 @@ final class TranspositionTable
         return m_Entries.length;
     }
 
-    /** Returns a scored entry for the full key, or null if only a move hint or no entry exists. */
+    /** Looks up a scored entry by key. Use ProbeExact for score reuse. */
     Entry Probe(long key)
     {
         return ProbeSlot(key) instanceof Entry entry ? entry : null;
+    }
+
+    /** Returns an exact score entry when the key, depth, and draw context match. */
+    Entry ProbeExact(Position position, int depth)
+    {
+        Entry entry = Probe(position.GetPositionKey());
+        if (entry != null && entry.bound() == Bound.EXACT && entry.depth() == depth
+                && position.MatchesDrawContext(entry.drawContext()))
+            return entry;
+        return null;
     }
 
     /** Returns the stored move for the full key, or {@link Move#NONE} on a miss. */

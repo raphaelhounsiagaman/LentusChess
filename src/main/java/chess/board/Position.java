@@ -377,6 +377,33 @@ public class Position
         return Arrays.copyOf(m_PositionHistory, m_HistorySize);
     }
 
+    /** Immutable snapshot of the halfmove clock and known history relevant to future draws. */
+    public static final class DrawContext
+    {
+        private final int m_HalfmoveClock;
+        private final long[] m_RepetitionHistory;
+
+        private DrawContext(Position position)
+        {
+            m_HalfmoveClock = position.m_HalfmoveClock;
+            m_RepetitionHistory = Arrays.copyOfRange(position.m_PositionHistory,
+                    position.RepetitionHistoryStart(), position.m_HistorySize);
+        }
+    }
+
+    public DrawContext CaptureDrawContext()
+    {
+        return new DrawContext(this);
+    }
+
+    /** Compares both sides' known repetition keys without copying history at lookup. */
+    public boolean MatchesDrawContext(DrawContext context)
+    {
+        return m_HalfmoveClock == context.m_HalfmoveClock
+                && Arrays.equals(m_PositionHistory, RepetitionHistoryStart(), m_HistorySize,
+                        context.m_RepetitionHistory, 0, context.m_RepetitionHistory.length);
+    }
+
     public DrawReason GetDrawReason()
     {
         // Prefer a board-only reason when it suffices, regardless of the history.
@@ -393,7 +420,7 @@ public class Position
     {
         int occurrences = 1; // Include the current position.
         int current = m_HistorySize - 1;
-        int first = Math.max(0, current - m_HalfmoveClock);
+        int first = RepetitionHistoryStart();
         // Only the same side to move can repeat; pawn moves and captures end the scan.
         for (int index = current - 2; index >= first; index -= 2)
         {
@@ -401,6 +428,11 @@ public class Position
                 return true;
         }
         return false;
+    }
+
+    private int RepetitionHistoryStart()
+    {
+        return Math.max(0, m_HistorySize - 1 - m_HalfmoveClock);
     }
 
     private boolean HasInsufficientMaterial()

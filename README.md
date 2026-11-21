@@ -116,19 +116,18 @@ A different key replaces the slot, and a write for the same key replaces the
 entry at equal or greater depth. The table supports explicit clearing.
 
 Each UCI search starts with an empty table. After terminal and draw checks,
-interior negamax nodes prioritize a matching table move if it occurs in the
-legal move list. A finished node, including a cutoff, can supply a move hint.
-Mate-score conversion adds the storage node's root ply to winning mate scores
-and subtracts it from losing mate scores, making the table score relative to
-the stored position. The inverse uses the probing node's root ply. The mate
-band covers regular search and quiescence plies. Search currently uses the
-table for move ordering only.
+interior negamax nodes can reuse exact scores at the same remaining depth. A
+completed search stores an exact score when it falls strictly inside the
+original alpha-beta window. Other completed searches supply a move hint. When
+search continues, a matching table move takes priority if it is legal.
+Mate scores are stored relative to the node and converted back using the probing
+node's root ply. The mate band covers regular search and quiescence plies.
 
-Score and bound reuse requires a probe-time guarantee of compatible halfmove
-clocks and repetition histories, or proof that the result is independent of
-both. A board-key match, a clear history-dependent flag at storage, and a draw
-check at the probing node are insufficient because descendants can reach a
-repetition or the fifty-move threshold in one context and play on in another.
+An exact score hit requires the same board key, halfmove clock, and sequence of
+known repetition keys since the last pawn move or capture. Descendants can
+reach a draw in one context and play on in another, even when both probing
+positions are ongoing. On a hit, search carries forward the stored
+history-dependent flag. Lower and upper bounds remain future work.
 
 Pondering remains future work.
 

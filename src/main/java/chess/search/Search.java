@@ -142,7 +142,12 @@ public class Search
             return new Score(0, draw.IsHistoryDependent());
 
         long key = position.GetPositionKey();
+        TranspositionTable.Entry cached = m_TranspositionTable.ProbeExact(position, depth);
+        if (cached != null)
+            return new Score(FromTableScore(cached.score(), ply), cached.historyDependent());
+
         MoveOrdering.Order(position, moves, m_TranspositionTable.ProbeMove(key));
+        int originalAlpha = alpha;
         int best = -INFINITY;
         int bestMove = Move.NONE;
         boolean historyDependent = false;
@@ -171,7 +176,15 @@ public class Search
             if (alpha >= beta)
                 break;
         }
-        m_TranspositionTable.StoreMove(key, depth, bestMove);
+        if (originalAlpha < best && best < beta)
+        {
+            m_TranspositionTable.Store(new TranspositionTable.Entry(key, depth, ToTableScore(best, ply),
+                    TranspositionTable.Bound.EXACT, bestMove, position.CaptureDrawContext(), historyDependent));
+        }
+        else
+        {
+            m_TranspositionTable.StoreMove(key, depth, bestMove);
+        }
         return new Score(best, historyDependent);
     }
 

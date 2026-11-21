@@ -127,6 +127,32 @@ class SearchTest
                 > 1 + generator.GenerateLegalMoves(tactical).size());
     }
 
+    @ParameterizedTest
+    @CsvSource({"0, false", "98, true"})
+    void reusesAnExactMateScoreAndSkipsItsDescendants(int clock, boolean historyDependent)
+    {
+        Position position = PositionFrom("7k/8/5QK1/8/8/8/8/8 b - - " + clock + " 50");
+        TranspositionTable table = new TranspositionTable(16_384);
+        Search search = new Search(table);
+
+        Search.Result cold = search.FindBestMove(position, 2);
+        assertEquals(-Search.MATE_SCORE + 2, cold.score());
+        assertEquals("h8g8", Move.ToUci(cold.bestMove()));
+        assertEquals(historyDependent, cold.historyDependent());
+        Position child = new Position(position);
+        child.MakeMove(cold.bestMove(), new Position.UndoState());
+        TranspositionTable.Entry stored = table.ProbeExact(child, 1);
+        assertNotNull(stored);
+        assertEquals(Search.MATE_SCORE - 1, stored.score());
+
+        Search.Result warm = search.FindBestMove(position, 2);
+        assertEquals(cold.depth(), warm.depth());
+        assertEquals(cold.bestMove(), warm.bestMove());
+        assertEquals(cold.score(), warm.score());
+        assertEquals(historyDependent, warm.historyDependent());
+        assertTrue(warm.nodes() < cold.nodes());
+    }
+
     @Test
     void recursionGuardAbortsInsteadOfEvaluatingCheck() throws Exception
     {
